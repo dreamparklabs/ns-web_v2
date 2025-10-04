@@ -7,7 +7,7 @@ export const getUserStats = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return null; // Return null instead of throwing error
     }
 
     // Get current user
@@ -17,7 +17,7 @@ export const getUserStats = query({
       .unique();
 
     if (!user) {
-      throw new Error("User not found");
+      return null; // Return null instead of throwing error
     }
 
     return {
@@ -36,7 +36,7 @@ export const getCourseGrades = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return []; // Return empty array instead of throwing error
     }
 
     // Get current user
@@ -46,7 +46,7 @@ export const getCourseGrades = query({
       .unique();
 
     if (!user) {
-      throw new Error("User not found");
+      return []; // Return empty array instead of throwing error
     }
 
     let coursesQuery = ctx.db
@@ -132,7 +132,7 @@ export const getUserTerms = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return []; // Return empty array instead of throwing error
     }
 
     // Get current user
@@ -142,7 +142,7 @@ export const getUserTerms = query({
       .unique();
 
     if (!user) {
-      throw new Error("User not found");
+      return []; // Return empty array instead of throwing error
     }
 
     // Get all terms for this user
@@ -161,12 +161,12 @@ export const getTerm = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return null; // Return null instead of throwing error
     }
 
     const term = await ctx.db.get(args.termId);
     if (!term) {
-      throw new Error("Term not found");
+      return null; // Return null instead of throwing error
     }
 
     // Verify the term belongs to the current user
@@ -176,7 +176,7 @@ export const getTerm = query({
       .unique();
 
     if (!user || term.userId !== user._id) {
-      throw new Error("Access denied");
+      return null; // Return null instead of throwing error
     }
 
     return term;
@@ -189,7 +189,7 @@ export const getGPATrend = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return []; // Return empty array instead of throwing error
     }
 
     // Get current user
@@ -199,7 +199,7 @@ export const getGPATrend = query({
       .unique();
 
     if (!user) {
-      throw new Error("User not found");
+      return []; // Return empty array instead of throwing error
     }
 
     // Get all terms for this user
