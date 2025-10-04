@@ -30,28 +30,7 @@ export default function Grades() {
   );
 
 
-  // Loading state
-  if (userStats === undefined || userTerms === undefined || courseGrades === undefined || gpaTrend === undefined) {
-    return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading grades...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Not authenticated or no user data yet
-  if (!userStats || !courseGrades) {
-    return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">Initializing your grades...</p>
-        </div>
-      </div>
-    );
-  }
+  // Show layout immediately, no loading spinners
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 max-w-none mx-auto px-4 xl:px-6 2xl:px-8">
@@ -79,10 +58,10 @@ export default function Grades() {
                 <div>
                   <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Current GPA</p>
                   <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">
-                    {userStats.gpa ? userStats.gpa.toFixed(2) : "0.00"}
+                    {userStats?.gpa ? userStats.gpa.toFixed(2) : "—"}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {isFilteringByTerm ? `Term: ${userTerms?.find(t => t._id === globalTermId)?.name}` : "Overall GPA"}
+                    {isFilteringByTerm ? `Term: ${userTerms?.find(t => t._id === globalTermId)?.name || '...'}` : "Overall GPA"}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
@@ -100,7 +79,7 @@ export default function Grades() {
                 <div>
                   <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Credits Completed</p>
                   <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">
-                    {userStats.totalCredits || 0}
+                    {userStats?.totalCredits || 0}
                   </p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     {courseGrades?.reduce((sum, course) => sum + course.creditHours, 0) || 0} this term
