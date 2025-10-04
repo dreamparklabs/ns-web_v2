@@ -3,7 +3,8 @@ import { redirect } from "react-router";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api";
 
-const convex = new ConvexHttpClient(process.env.VITE_CONVEX_URL!);
+// Use CONVEX_URL for server-side (not VITE_ prefix)
+const convex = new ConvexHttpClient(process.env.CONVEX_URL || process.env.VITE_CONVEX_URL || "");
 
 export async function action({ request }: ActionFunctionArgs) {
   // Handle LTI launch POST request
