@@ -312,4 +312,65 @@ export default defineSchema({
   }).index("by_user", ["userId"])
     .index("by_status", ["status"])
     .index("by_type", ["jobType"]),
+
+  // Cost Tracking Tables for Unit Economics
+  aiUsageLogs: defineTable({
+    userId: v.id("users"),
+    feature: v.string(), // "assignment-parser", "ocr", "email-parser", etc.
+    model: v.string(), // "gemini-pro", "gpt-4", etc.
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    totalTokens: v.number(),
+    costUSD: v.float64(),
+    timestamp: v.float64(),
+    metadata: v.optional(v.any()),
+  }).index("by_user", ["userId"])
+    .index("by_feature", ["feature"])
+    .index("by_timestamp", ["timestamp"]),
+
+  apiUsageLogs: defineTable({
+    userId: v.id("users"),
+    service: v.string(), // "d2l", "clerk", "ocr", etc.
+    endpoint: v.string(),
+    requestCount: v.number(),
+    costUSD: v.float64(),
+    timestamp: v.float64(),
+    metadata: v.optional(v.any()),
+  }).index("by_user", ["userId"])
+    .index("by_service", ["service"])
+    .index("by_timestamp", ["timestamp"]),
+
+  storageCostLogs: defineTable({
+    userId: v.id("users"),
+    storageType: v.string(), // "convex", "s3", etc.
+    bytesStored: v.number(),
+    costUSD: v.float64(),
+    timestamp: v.float64(),
+  }).index("by_user", ["userId"])
+    .index("by_timestamp", ["timestamp"]),
+
+  revenueLog: defineTable({
+    userId: v.id("users"),
+    revenueType: v.string(), // "subscription", "one-time", "usage"
+    amountUSD: v.float64(),
+    description: v.string(),
+    billingPeriodStart: v.optional(v.float64()),
+    billingPeriodEnd: v.optional(v.float64()),
+    timestamp: v.float64(),
+    metadata: v.optional(v.any()),
+  }).index("by_user", ["userId"])
+    .index("by_type", ["revenueType"])
+    .index("by_timestamp", ["timestamp"]),
+
+  userCostSummary: defineTable({
+    userId: v.id("users"),
+    totalCostUSD: v.float64(),
+    aiCostUSD: v.float64(),
+    apiCostUSD: v.float64(),
+    storageCostUSD: v.float64(),
+    totalRevenueUSD: v.float64(),
+    profitMarginUSD: v.float64(), // revenue - cost
+    lastUpdated: v.float64(),
+  }).index("by_user", ["userId"])
+    .index("by_profit", ["profitMarginUSD"]),
 });

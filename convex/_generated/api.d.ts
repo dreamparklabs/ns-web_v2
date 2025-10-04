@@ -35,6 +35,7 @@ import type * as onboarding from "../onboarding.js";
 import type * as schools from "../schools.js";
 import type * as seed from "../seed.js";
 import type * as terms from "../terms.js";
+import type * as userCosts from "../userCosts.js";
 import type * as users from "../users.js";
 
 /**
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   schools: typeof schools;
   seed: typeof seed;
   terms: typeof terms;
+  userCosts: typeof userCosts;
   users: typeof users;
 }>;
 export declare const api: FilterApi<
