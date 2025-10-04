@@ -16,6 +16,7 @@ import type {
 import type * as aiParser from "../aiParser.js";
 import type * as assignmentMaster from "../assignmentMaster.js";
 import type * as assignments from "../assignments.js";
+import type * as authDiagnostics from "../authDiagnostics.js";
 import type * as autoSync from "../autoSync.js";
 import type * as courses from "../courses.js";
 import type * as d2l from "../d2l.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   aiParser: typeof aiParser;
   assignmentMaster: typeof assignmentMaster;
   assignments: typeof assignments;
+  authDiagnostics: typeof authDiagnostics;
   autoSync: typeof autoSync;
   courses: typeof courses;
   d2l: typeof d2l;
