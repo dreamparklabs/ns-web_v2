@@ -17,6 +17,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const POSTHOG_HOST = import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
     if (POSTHOG_KEY && typeof window !== "undefined") {
+      console.log('🔍 PostHog: Initializing with key:', POSTHOG_KEY.substring(0, 10) + '...');
+      console.log('🔍 PostHog: Host:', POSTHOG_HOST);
+      
       posthog.init(POSTHOG_KEY, {
         api_host: POSTHOG_HOST,
         person_profiles: "identified_only",
@@ -39,10 +42,16 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         capture_performance: true, // Track performance metrics
         enable_recording_console_log: true, // Capture console logs
         capture_dead_clicks: true, // Capture rage clicks and dead clicks
+        loaded: function(posthog) {
+          console.log('✅ PostHog: Successfully initialized and loaded!');
+        },
       });
+      
+      console.log('✅ PostHog: Init called successfully');
 
       // Track user identity
       if (user) {
+        console.log('👤 PostHog: Identifying user:', user.id);
         posthog.identify(user.id, {
           email: user.primaryEmailAddress?.emailAddress,
           name: user.fullName,
@@ -51,6 +60,10 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
           createdAt: user.createdAt,
         });
       }
+    } else {
+      console.warn('⚠️ PostHog: Not initializing - Missing API key or not in browser environment');
+      console.log('POSTHOG_KEY present?', !!POSTHOG_KEY);
+      console.log('In browser?', typeof window !== "undefined");
     }
 
     return () => {
