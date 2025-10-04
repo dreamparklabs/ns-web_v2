@@ -3,6 +3,7 @@ import React, { useEffect, memo } from "react";
 import Sidebar from "./Sidebar";
 import RouteTransition from "./RouteTransition";
 import { useUserSetup } from "../hooks/useUserSetup";
+import { PostHogPageView } from "./PostHogPageView";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -113,9 +114,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
+      {/* PostHog Analytics - Track page views */}
+      <PostHogPageView />
+
       {/* Memoized Sidebar */}
       <SidebarWrapper />
-      
+
       {/* Memoized Content Area */}
       <ContentArea>
         {children}

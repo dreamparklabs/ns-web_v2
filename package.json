@@ -20,6 +20,8 @@
     "pdf-parse": "^1.1.1",
     "pdf-poppler": "^0.2.1",
     "pdfjs-dist": "^5.4.149",
+    "posthog-js": "^1.270.1",
+    "posthog-node": "^5.9.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.7.1",

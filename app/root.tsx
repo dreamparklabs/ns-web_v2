@@ -11,6 +11,7 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { PostHogProvider } from "./contexts/PostHogContext";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -101,11 +102,13 @@ export default function App() {
   if (!convex) {
     return (
       <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-        <ThemeProvider>
-          <NotificationProvider>
-            <Outlet />
-          </NotificationProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider>
+            <NotificationProvider>
+              <Outlet />
+            </NotificationProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </ClerkProvider>
     );
   }
@@ -113,11 +116,13 @@ export default function App() {
   return (
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ThemeProvider>
-          <NotificationProvider>
-            <Outlet />
-          </NotificationProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider>
+            <NotificationProvider>
+              <Outlet />
+            </NotificationProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
