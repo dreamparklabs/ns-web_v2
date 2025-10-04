@@ -42,6 +42,17 @@ export default function Grades() {
     );
   }
 
+  // Not authenticated or no user data yet
+  if (!userStats || !courseGrades) {
+    return (
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400">Initializing your grades...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 max-w-none mx-auto px-4 xl:px-6 2xl:px-8">
         {/* Header */}
