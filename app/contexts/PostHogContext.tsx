@@ -13,8 +13,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initialize PostHog
-    const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-    const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com";
+    const POSTHOG_KEY = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
+    const POSTHOG_HOST = import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
     if (POSTHOG_KEY && typeof window !== "undefined") {
       posthog.init(POSTHOG_KEY, {
@@ -22,15 +22,23 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         person_profiles: "identified_only",
         capture_pageview: true, // Automatically capture page views
         capture_pageleave: true, // Track when users leave pages
-        autocapture: true, // Automatically capture clicks, form submissions, etc.
+        autocapture: {
+          // Capture all clicks, inputs, form submissions
+          dom_event_allowlist: ['click', 'change', 'submit', 'input'],
+          url_allowlist: [window.location.origin], // Only track our domain
+          element_allowlist: ['a', 'button', 'form', 'input', 'select', 'textarea', 'label'],
+          css_selector_allowlist: ['[ph-capture]'], // Custom attribute for tracking
+        },
         disable_session_recording: false, // Enable session recordings
         session_recording: {
-          maskAllInputs: true, // Mask sensitive input fields
-          maskTextSelector: "[data-private]", // Mask elements with data-private attribute
+          maskAllInputs: false, // DON'T mask inputs - capture everything (privacy warning!)
+          maskTextSelector: "[data-private]", // Only mask elements with data-private attribute
+          recordCrossOriginIframes: true, // Record iframes
         },
         // Advanced tracking
         capture_performance: true, // Track performance metrics
         enable_recording_console_log: true, // Capture console logs
+        capture_dead_clicks: true, // Capture rage clicks and dead clicks
       });
 
       // Track user identity

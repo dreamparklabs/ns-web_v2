@@ -26,15 +26,15 @@ Add to your `.env.local` file:
 
 ```env
 # PostHog Analytics
-VITE_POSTHOG_KEY=phc_your_project_api_key_here
-VITE_POSTHOG_HOST=https://us.i.posthog.com
+VITE_PUBLIC_POSTHOG_KEY=phc_your_project_api_key_here
+VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 **For Production (Vercel):**
 1. Go to Vercel → Settings → Environment Variables
 2. Add:
-   - `VITE_POSTHOG_KEY`: Your PostHog project API key
-   - `VITE_POSTHOG_HOST`: `https://us.i.posthog.com`
+   - `VITE_PUBLIC_POSTHOG_KEY`: Your PostHog project API key
+   - `VITE_PUBLIC_POSTHOG_HOST`: `https://us.i.posthog.com`
 3. Apply to: ✅ Production, ✅ Preview, ✅ Development
 
 ### 3. Verify Installation
