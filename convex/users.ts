@@ -69,7 +69,7 @@ export const getProgressData = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return null; // Return null instead of throwing error
     }
 
     // Get the user from the database
