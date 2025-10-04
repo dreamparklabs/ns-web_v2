@@ -1,17 +1,19 @@
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/home";
 import { useUserSetup } from "../hooks/useUserSetup";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Home - My React Router App" },
-    { name: "description", content: "Welcome to our homepage!" },
+    { title: "Welcome to Northstar" },
+    { name: "description", content: "Login or Sign Up to Continue" },
   ];
 }
 
 export default function Home() {
   const { needsOnboarding, isUserReady } = useUserSetup();
-  
+  const navigate = useNavigate();
+
   // Determine the correct dashboard URL based on onboarding status
   const getDashboardUrl = () => {
     if (!isUserReady) return "/onboarding"; // Default while loading
@@ -19,84 +21,205 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Welcome to Our App
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--color-bg)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '5vh 16px'
+    }}>
+      <SignedIn>
+        <div style={{
+          background: 'var(--color-card)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-8)',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center'
+        }}>
+          <h1 style={{
+            fontSize: 'var(--text-2xl)',
+            fontWeight: '600',
+            color: 'var(--color-fg)',
+            marginBottom: 'var(--space-4)'
+          }}>
+            Welcome to Northstar
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            This is the homepage of our React Router application with Tailwind CSS styling.
-            Explore our features and get started today!
+          <p style={{
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-muted)',
+            marginBottom: 'var(--space-6)'
+          }}>
+            You're already signed in
           </p>
-          <div className="space-x-4">
-            <SignedIn>
-              <a
-                href={getDashboardUrl()}
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl"
-              >
-                Go to Dashboard
-              </a>
-              <div className="inline-block">
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-12 h-12"
-                    }
-                  }}
-                  afterSignOutUrl="/"
-                />
-              </div>
-            </SignedIn>
-            <SignedOut>
-              <a
-                href="/sign-up"
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl"
-              >
-                Get Started
-              </a>
-              <a
-                href="/sign-in"
-                className="inline-block bg-white hover:bg-gray-50 text-blue-600 font-semibold py-3 px-8 rounded-lg border border-blue-600 transition duration-200 shadow-lg hover:shadow-xl"
-              >
-                Sign In
-              </a>
-            </SignedOut>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+            alignItems: 'center'
+          }}>
+            <button
+              onClick={() => navigate(getDashboardUrl())}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                background: 'var(--color-accent)',
+                color: 'var(--color-accent-fg)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+            >
+              Go to Dashboard
+            </button>
+            <div style={{ marginTop: 'var(--space-2)' }}>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-12 h-12"
+                  }
+                }}
+                afterSignOutUrl="/"
+              />
+            </div>
           </div>
         </div>
-        
-        <div className="mt-16 grid md:grid-cols-3 gap-8">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Fast & Modern</h3>
-            <p className="text-gray-600 dark:text-gray-300">Built with React Router and optimized for performance.</p>
+      </SignedIn>
+
+      <SignedOut>
+        <div style={{
+          background: 'var(--color-card)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-8)',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }}>
+          <h1 style={{
+            fontSize: 'var(--text-2xl)',
+            fontWeight: '600',
+            color: 'var(--color-fg)',
+            marginBottom: 'var(--space-2)'
+          }}>
+            Welcome to Northstar
+          </h1>
+          <p style={{
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-muted)',
+            marginBottom: 'var(--space-6)'
+          }}>
+            Login or Sign Up to Continue
+          </p>
+
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+            marginBottom: 'var(--space-6)'
+          }}>
+            <a
+              href="/sign-in"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '14px 16px',
+                background: 'var(--color-accent)',
+                color: 'var(--color-accent-fg)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: '500',
+                textDecoration: 'none',
+                transition: 'opacity 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+            >
+              Sign In
+            </a>
+
+            <a
+              href="/sign-up"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '14px 16px',
+                background: 'var(--color-card)',
+                color: 'var(--color-fg)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: '500',
+                textDecoration: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'var(--color-bg-subtle)';
+                e.currentTarget.style.borderColor = 'var(--color-border-hover)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'var(--color-card)';
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+              }}
+            >
+              Create Account
+            </a>
           </div>
-          
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Reliable</h3>
-            <p className="text-gray-600 dark:text-gray-300">Tested and trusted by thousands of developers worldwide.</p>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Responsive</h3>
-            <p className="text-gray-600 dark:text-gray-300">Beautiful design that works on all devices and screen sizes.</p>
-          </div>
+
+          <p style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-muted)',
+            lineHeight: '1.5',
+            margin: '0'
+          }}>
+            By continuing, you agree to our{' '}
+            <a
+              href="https://dreamparklabs.com/legal/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-accent)',
+                textDecoration: 'none'
+              }}
+            >
+              Terms of Service
+            </a>
+            ,{' '}
+            <a
+              href="https://dreamparklabs.com/legal/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-accent)',
+                textDecoration: 'none'
+              }}
+            >
+              Privacy Policy
+            </a>
+            , and{' '}
+            <a
+              href="https://dreamparklabs.com/legal/eula"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-accent)',
+                textDecoration: 'none'
+              }}
+            >
+              End-User License Agreement
+            </a>
+          </p>
         </div>
-      </div>
+      </SignedOut>
     </div>
   );
 }

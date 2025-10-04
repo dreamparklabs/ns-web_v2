@@ -11,12 +11,14 @@ interface AppLayoutProps {
 // Memoized content area to prevent re-renders when sidebar doesn't need updates
 const ContentArea = memo(({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="flex-1 overflow-hidden">
+    <div className="flex-1 overflow-hidden bg-white dark:bg-gray-900">
       {/* Content wrapper with proper padding for mobile menu button */}
-      <main className="h-full pt-16 lg:pt-0 px-4 py-6 lg:px-8 overflow-y-auto backdrop-blur-sm">
-        <RouteTransition>
-          {children}
-        </RouteTransition>
+      <main className="h-full pt-16 lg:pt-0 overflow-y-auto bg-white dark:bg-gray-900">
+        <div className="h-full">
+          <RouteTransition>
+            {children}
+          </RouteTransition>
+        </div>
       </main>
     </div>
   );
@@ -110,7 +112,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="h-screen bg-gray-25 dark:bg-gray-925 flex">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* Memoized Sidebar */}
       <SidebarWrapper />
       

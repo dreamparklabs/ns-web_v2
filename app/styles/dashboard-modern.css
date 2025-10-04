@@ -147,11 +147,11 @@
 
 /* Dark mode scrollbar */
 .dark .scrollbar-modern::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.5);
+  background: rgba(75, 85, 99, 0.6);
 }
 
 .dark .scrollbar-modern::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.7);
+  background: rgba(75, 85, 99, 0.8);
 }
 
 /* Responsive grid improvements */
@@ -173,7 +173,7 @@
 }
 
 .dark .border-modern {
-  border: 1px solid rgba(75, 85, 99, 0.8);
+  border: 1px solid rgba(107, 114, 128, 0.9);
 }
 
 /* Modern shadow utilities */
@@ -201,4 +201,44 @@
 
 .interactive:active {
   transform: scale(0.98);
+}
+
+/* Enhanced dark mode contrast utilities */
+.dark-contrast-bg {
+  background-color: rgb(17, 24, 39); /* gray-900 */
+}
+
+.dark-contrast-border {
+  border-color: rgb(75, 85, 99); /* gray-600 */
+}
+
+.dark-contrast-text-primary {
+  color: rgb(249, 250, 251); /* gray-50 */
+}
+
+.dark-contrast-text-secondary {
+  color: rgb(209, 213, 219); /* gray-300 */
+}
+
+.dark-contrast-text-muted {
+  color: rgb(156, 163, 175); /* gray-400 */
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .dark .bg-gray-900\/95 {
+    background-color: rgb(0, 0, 0) !important;
+  }
+
+  .dark .border-gray-600\/80 {
+    border-color: rgb(156, 163, 175) !important; /* gray-400 */
+  }
+
+  .dark .text-gray-300 {
+    color: rgb(229, 231, 235) !important; /* gray-200 */
+  }
+
+  .dark .text-gray-400 {
+    color: rgb(209, 213, 219) !important; /* gray-300 */
+  }
 }

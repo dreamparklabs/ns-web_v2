@@ -14,9 +14,9 @@ export default function DashboardWidget({
   headerAction
 }: DashboardWidgetProps) {
   return (
-    <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100/50 dark:border-gray-700/50 p-3 md:p-4 xl:p-5 2xl:p-6 w-full h-full transition-all duration-200 hover:shadow-md hover:shadow-gray-100/25 dark:hover:shadow-black/10 hover:border-gray-200/60 dark:hover:border-gray-600/60 group flex flex-col ${className}`}>
+    <div className={`bg-white/90 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/80 p-3 md:p-4 xl:p-5 2xl:p-6 w-full h-full transition-all duration-200 hover:shadow-lg hover:shadow-gray-200/30 dark:hover:shadow-black/20 hover:border-gray-300/70 dark:hover:border-gray-600/90 group flex flex-col ${className}`}>
       <div className="flex items-center justify-between mb-2 md:mb-3 xl:mb-4 flex-shrink-0">
-        <h3 className="text-xs md:text-sm xl:text-base font-medium text-gray-800 dark:text-gray-100 tracking-wide">
+        <h3 className="text-xs md:text-sm xl:text-base font-medium text-gray-900 dark:text-gray-50 tracking-wide">
           {title}
         </h3>
         {headerAction && (

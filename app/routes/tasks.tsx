@@ -303,7 +303,7 @@ export default function Tasks() {
                               </span>
                               {assignment.grade && (
                                 <span className="px-3 py-1 text-xs font-medium accent-purple text-white rounded-full">
-                                  {assignment.grade}%
+                                  {assignment.grade.toFixed(2)}%
                                 </span>
                               )}
                             </div>

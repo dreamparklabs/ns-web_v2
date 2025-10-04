@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import DashboardWidget from './DashboardWidget';
+import { useNavigate } from 'react-router';
 
 interface ProgressData {
   currentGPA: number;
@@ -20,6 +21,11 @@ interface ProgressData {
 export default function ProgressTrackerWidget() {
   // This will need to be implemented in Convex
   const progressData = useQuery(api.users.getProgressData) as ProgressData | undefined;
+  const navigate = useNavigate();
+
+  const navigateToAnalytics = () => {
+    navigate('/app/v2/analytics');
+  };
 
   const data = progressData;
 
@@ -42,10 +48,13 @@ export default function ProgressTrackerWidget() {
   const gpaProgress = data ? (data.targetGPA > 0 ? (data.currentGPA / data.targetGPA) * 100 : 0) : 0;
 
   return (
-    <DashboardWidget 
-      title="Progress" 
+    <DashboardWidget
+      title="Progress"
       headerAction={
-                <button className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200">
+                <button
+                  onClick={navigateToAnalytics}
+                  className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 px-2 py-1 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 font-semibold"
+                >
                   Analytics
                 </button>
       }
@@ -61,14 +70,14 @@ export default function ProgressTrackerWidget() {
               </p>
               <p className="text-[10px] text-gray-500 dark:text-gray-400">GPA</p>
             </div>
-          
+
           <div className="text-center">
                     <p className="text-base md:text-lg xl:text-xl 2xl:text-2xl font-bold text-gray-900 dark:text-white">
                       {data.completedAssignments}<span className="text-xs md:text-sm xl:text-base text-gray-500 dark:text-gray-400">/{data.totalAssignments}</span>
                     </p>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400">Assignments</p>
           </div>
-          
+
           <div className="text-center">
             <p className="text-base md:text-lg xl:text-xl 2xl:text-2xl font-bold text-gray-900 dark:text-white">
               {data.completedCredits}<span className="text-xs md:text-sm xl:text-base text-gray-500 dark:text-gray-400">/{data.totalCredits}</span>

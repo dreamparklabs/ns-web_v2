@@ -9,6 +9,8 @@ import {
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -54,7 +56,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="bg-white dark:bg-gray-900">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -99,7 +101,11 @@ export default function App() {
   if (!convex) {
     return (
       <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-        <Outlet />
+        <ThemeProvider>
+          <NotificationProvider>
+            <Outlet />
+          </NotificationProvider>
+        </ThemeProvider>
       </ClerkProvider>
     );
   }
@@ -107,7 +113,11 @@ export default function App() {
   return (
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <Outlet />
+        <ThemeProvider>
+          <NotificationProvider>
+            <Outlet />
+          </NotificationProvider>
+        </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );

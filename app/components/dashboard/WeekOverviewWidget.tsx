@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import DashboardWidget from './DashboardWidget';
+import { useNavigate } from 'react-router';
 
 interface WeekEvent {
   _id: string;
@@ -16,13 +17,19 @@ interface WeekEvent {
 export default function WeekOverviewWidget() {
   // This will need to be implemented in Convex
   const weekEvents = useQuery(api.events.getWeekEvents) as WeekEvent[] | undefined;
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const navigate = useNavigate();
+
+  const navigateToCalendar = () => {
+    navigate('/app/v2/calendar');
+  };
 
   const getWeekDays = () => {
     const today = new Date();
     const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const monday = new Date(today);
     monday.setDate(today.getDate() - currentDay + 1); // Get Monday of current week
-    
+
     const days = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(monday);
@@ -34,12 +41,12 @@ export default function WeekOverviewWidget() {
 
   const getEventsForDay = (date: Date) => {
     if (!weekEvents) return [];
-    
+
     const dayStart = new Date(date);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(date);
     dayEnd.setHours(23, 59, 59, 999);
-    
+
     return weekEvents.filter(event => {
       const eventDate = new Date(event.startTime);
       return eventDate >= dayStart && eventDate <= dayEnd;
@@ -94,17 +101,23 @@ export default function WeekOverviewWidget() {
         <h3 className="text-xs md:text-sm xl:text-base font-medium text-gray-800 dark:text-gray-100 tracking-wide">
           Week Overview
         </h3>
-        <button className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 px-2 py-1 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 font-semibold">
+        <button
+          onClick={navigateToCalendar}
+          className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 px-2 py-1 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 font-semibold"
+        >
           Full Schedule
         </button>
       </div>
-      
+
       {/* Content - Ultra compact to fit everything */}
       <div className="flex-1 flex flex-col space-y-2 min-h-0 overflow-hidden">
         {/* Week Navigation - Minimal */}
         <div className="flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-lg p-1.5 flex-shrink-0">
           <div className="flex items-center space-x-2">
-            <button className="p-0.5 rounded-full hover:bg-white dark:hover:bg-gray-600 transition-all duration-200">
+            <button
+              onClick={() => setCurrentWeekOffset(prev => prev - 1)}
+              className="p-0.5 rounded-full hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-110"
+            >
               <svg className="w-2 h-2 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -114,7 +127,10 @@ export default function WeekOverviewWidget() {
                 {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </h4>
             </div>
-            <button className="p-0.5 rounded-full hover:bg-white dark:hover:bg-gray-600 transition-all duration-200">
+            <button
+              onClick={() => setCurrentWeekOffset(prev => prev + 1)}
+              className="p-0.5 rounded-full hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-110"
+            >
               <svg className="w-2 h-2 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -130,14 +146,15 @@ export default function WeekOverviewWidget() {
               return eventDate.toDateString() === day.toDateString();
             });
             const today = isToday(day);
-            
+
             return (
               <div
                 key={day.toISOString()}
-                className={`relative p-1 rounded-md transition-all duration-200 cursor-pointer ${
-                  today 
-                    ? 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-800/40 border border-purple-300 dark:border-purple-600' 
-                    : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600'
+                onClick={() => navigateToCalendar()}
+                className={`relative p-1 rounded-md transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-md ${
+                  today
+                    ? 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-800/40 border border-purple-300 dark:border-purple-600 hover:from-purple-200 hover:to-purple-300 dark:hover:from-purple-800/60 dark:hover:to-purple-700/60'
+                    : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-600'
                 }`}
               >
                 {/* Today indicator */}
@@ -160,8 +177,8 @@ export default function WeekOverviewWidget() {
                   {/* Event Count directly below date */}
                   {dayEvents.length > 0 ? (
                     <div className={`inline-flex items-center justify-center w-3 h-3 text-[7px] font-bold rounded-full mt-0.5 ${
-                      today 
-                        ? 'bg-purple-600 text-white' 
+                      today
+                        ? 'bg-purple-600 text-white'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
                     }`}>
                       {dayEvents.length}
@@ -198,7 +215,7 @@ export default function WeekOverviewWidget() {
               <p className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Events</p>
             </div>
           </div>
-          
+
           {/* Next Event - Only if there's one today */}
           {(() => {
             const todayEvents = displayEvents.filter(event => {
@@ -206,7 +223,7 @@ export default function WeekOverviewWidget() {
               const eventDate = new Date(event.startTime);
               return eventDate.toDateString() === today.toDateString() && event.startTime > Date.now();
             });
-            
+
             if (todayEvents.length > 0) {
               const nextEvent = todayEvents[0];
               return (

@@ -29,7 +29,7 @@ export const getUserCourses = query({
 
         const completedAssignments = assignments.filter(a => a.status === "completed");
         const gradedAssignments = assignments.filter(a => a.grade !== undefined);
-        
+
         // Calculate average grade
         const averageGrade = gradedAssignments.length > 0
           ? gradedAssignments.reduce((sum, a) => sum + (a.grade || 0), 0) / gradedAssignments.length
@@ -53,7 +53,7 @@ export const getUserCourses = query({
 
 // Get courses for a user, optionally filtered by term
 export const getUserCoursesByTerm = query({
-  args: { 
+  args: {
     clerkUserId: v.string(),
     termId: v.optional(v.id("terms"))
   },
@@ -87,14 +87,14 @@ export const getUserCoursesByTerm = query({
 
         const completedAssignments = assignments.filter(a => a.status === "completed");
         const gradedAssignments = assignments.filter(a => a.grade !== undefined);
-        
+
         // Calculate average grade
         const averageGrade = gradedAssignments.length > 0
           ? gradedAssignments.reduce((sum, a) => sum + (a.grade || 0), 0) / gradedAssignments.length
           : null;
 
         // Format meeting days and times
-        const meetingTime = course.meetingStart && course.meetingEnd 
+        const meetingTime = course.meetingStart && course.meetingEnd
           ? `${course.meetingStart}-${course.meetingEnd}`
           : null;
 
@@ -116,6 +116,77 @@ export const getUserCoursesByTerm = query({
     );
 
     return coursesWithStats;
+  },
+});
+
+// Get a single course by ID with detailed information
+export const getCourseById = query({
+  args: {
+    courseId: v.id("courses"),
+    clerkUserId: v.string()
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("clerkUserId"), args.clerkUserId))
+      .first();
+
+    if (!user) {
+      return null;
+    }
+
+    const course = await ctx.db.get(args.courseId);
+
+    if (!course || course.userId !== user._id) {
+      return null;
+    }
+
+    // Get all assignments for this course
+    const assignments = await ctx.db
+      .query("assignments")
+      .filter((q) => q.eq(q.field("courseId"), course._id))
+      .collect();
+
+    const completedAssignments = assignments.filter(a => a.status === "completed");
+    const gradedAssignments = assignments.filter(a => a.grade !== undefined);
+    const upcomingAssignments = assignments.filter(a =>
+      a.status !== "completed" && a.dueAt && a.dueAt > Date.now()
+    );
+    const overdueAssignments = assignments.filter(a =>
+      a.status !== "completed" && a.dueAt && a.dueAt < Date.now()
+    );
+
+    // Calculate average grade
+    const averageGrade = gradedAssignments.length > 0
+      ? gradedAssignments.reduce((sum, a) => sum + (a.grade || 0), 0) / gradedAssignments.length
+      : null;
+
+    // Format meeting schedule
+    const meetingTime = course.meetingStart && course.meetingEnd
+      ? `${course.meetingStart}-${course.meetingEnd}`
+      : null;
+
+    const meetingSchedule = course.meetingDays && meetingTime
+      ? `${course.meetingDays.join('')} ${meetingTime}`
+      : null;
+
+    // Get term information
+    const term = await ctx.db.get(course.termId);
+
+    return {
+      ...course,
+      totalAssignments: assignments.length,
+      completedAssignments: completedAssignments.length,
+      upcomingAssignments: upcomingAssignments.length,
+      overdueAssignments: overdueAssignments.length,
+      averageGrade: averageGrade ? Math.round(averageGrade) : null,
+      meetingSchedule,
+      assignments: assignments.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0)),
+      term: term ? { name: term.name, _id: term._id } : null,
+      // Add computed fields for easier access
+      courseCode: course.code,
+      courseName: course.title
+    };
   },
 });
 

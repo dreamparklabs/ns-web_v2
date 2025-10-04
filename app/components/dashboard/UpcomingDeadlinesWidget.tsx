@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import DashboardWidget from './DashboardWidget';
+import { useNavigate, useLocation } from 'react-router';
 
 interface Assignment {
   _id: string;
@@ -16,6 +17,19 @@ interface Assignment {
 export default function UpcomingDeadlinesWidget() {
   // This will need to be implemented in Convex
   const upcomingAssignments = useQuery(api.assignments.getUpcomingDeadlines) as Assignment[] | undefined;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const openAssignmentModal = (assignmentId: string) => {
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.set('edit-assignment', assignmentId);
+    const searchString = newSearchParams.toString();
+    navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
+  };
+
+  const navigateToTasks = () => {
+    navigate('/app/v2/tasks');
+  };
 
   const getDaysUntilDue = (dueDate: number) => {
     const now = Date.now();
@@ -57,10 +71,13 @@ export default function UpcomingDeadlinesWidget() {
   };
 
   return (
-    <DashboardWidget 
-      title="Deadlines" 
+    <DashboardWidget
+      title="Deadlines"
       headerAction={
-        <button className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200">
+        <button
+          onClick={navigateToTasks}
+          className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 px-2 py-1 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 font-semibold"
+        >
           View Assignments
         </button>
       }
@@ -70,11 +87,12 @@ export default function UpcomingDeadlinesWidget() {
           upcomingAssignments.slice(0, 5).map((assignment) => {
             const daysUntil = getDaysUntilDue(assignment.dueAt);
             const priorityInfo = getPriorityInfo(daysUntil);
-            
+
             return (
-              <div 
-                key={assignment._id} 
-                className={`p-2 rounded border ${priorityInfo.color}`}
+              <div
+                key={assignment._id}
+                onClick={() => openAssignmentModal(assignment._id)}
+                className={`p-2 rounded border ${priorityInfo.color} cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">

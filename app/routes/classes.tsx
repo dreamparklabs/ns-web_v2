@@ -1,7 +1,7 @@
 import type { Route } from "./+types/classes";
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/clerk-react";
-import { useSearchParams, useLocation, useNavigate } from "react-router";
+import { useSearchParams, useLocation, useNavigate, Link } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useGlobalTerm } from "../hooks/useGlobalTerm";
@@ -17,15 +17,34 @@ type FilterType = "all" | "current" | "completed";
 
 export default function Classes() {
   const { user } = useUser();
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { globalTermId } = useGlobalTerm();
 
+  // Get filter from URL params, default to "all"
+  const urlFilter = searchParams.get("filter");
+  const validFilters: FilterType[] = ["all", "current", "completed"];
+  const activeFilter: FilterType = validFilters.includes(urlFilter as FilterType)
+    ? (urlFilter as FilterType)
+    : "all";
+
+  // Function to update filter and URL
+  const setActiveFilter = (filter: FilterType) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (filter === "all") {
+      // Remove filter param when showing all classes
+      newSearchParams.delete("filter");
+    } else {
+      newSearchParams.set("filter", filter);
+    }
+    setSearchParams(newSearchParams);
+  };
+
   // Get courses data from Convex
   const courses = useQuery(
     api.courses.getUserCoursesByTerm,
-    user?.id ? { 
+    user?.id ? {
       clerkUserId: user.id,
       termId: globalTermId ? globalTermId as any : undefined
     } : "skip"
@@ -37,7 +56,7 @@ export default function Classes() {
 
     const activeClasses = courses.length;
     const totalCredits = courses.reduce((sum, course) => sum + course.creditHours, 0);
-    
+
     // Calculate average GPA from course grades
     const coursesWithGrades = courses.filter(course => course.averageGrade !== null);
     const averageGPA = coursesWithGrades.length > 0
@@ -54,7 +73,7 @@ export default function Classes() {
   // Filter courses based on active filter
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
-    
+
     switch (activeFilter) {
       case "current":
         return courses; // All courses are considered current for now
@@ -85,7 +104,7 @@ export default function Classes() {
                 Manage your enrolled courses and class schedules.
               </p>
             </div>
-            <button 
+            <button
               onClick={openAddClassModal}
               className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-semibold hover:bg-purple-700 hover:shadow-md transition-all duration-200 transform hover:scale-105"
             >
@@ -207,7 +226,7 @@ export default function Classes() {
                     <p className="text-gray-500 dark:text-gray-400 mb-4">
                       {globalTermId ? "No classes found for the selected term." : "You haven't added any classes yet."}
                     </p>
-                    <button 
+                    <button
                       onClick={openAddClassModal}
                       className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
                     >
@@ -223,7 +242,7 @@ export default function Classes() {
                       // Cycle through gradient colors
                       const gradients = [
                         "from-purple-500 to-blue-500",
-                        "from-green-500 to-teal-500", 
+                        "from-green-500 to-teal-500",
                         "from-blue-500 to-cyan-500",
                         "from-orange-500 to-red-500",
                         "from-pink-500 to-rose-500",
@@ -234,7 +253,7 @@ export default function Classes() {
                       const gradient = gradients[index % gradients.length];
 
                       // Format grade display
-                      const gradeDisplay = course.averageGrade 
+                      const gradeDisplay = course.averageGrade
                         ? `${course.averageGrade >= 90 ? 'A' : course.averageGrade >= 80 ? 'B' : course.averageGrade >= 70 ? 'C' : course.averageGrade >= 60 ? 'D' : 'F'} (${course.averageGrade}%)`
                         : 'No Grade';
 
@@ -246,7 +265,11 @@ export default function Classes() {
                         : 'text-gray-500 dark:text-gray-400';
 
                       return (
-                        <div key={course._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
+                        <Link
+                          key={course._id}
+                          to={`/app/v2/classes/${course._id}`}
+                          className="block bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200 transform hover:scale-[1.02]"
+                        >
                           <div className={`h-20 bg-gradient-to-r ${gradient}`}></div>
                           <div className="p-4">
                             <div className="flex items-start justify-between mb-3">
@@ -309,7 +332,7 @@ export default function Classes() {
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useUser } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "framer-motion";
+import CreateTermModal from "./CreateTermModal";
 
 interface TermSelectorModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isCreateTermModalOpen, setIsCreateTermModalOpen] = useState(false);
   
   // Get current global term filter
   const currentGlobalTerm = searchParams.get("globalTerm") || "all";
@@ -86,6 +88,13 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
     return term?.name || "All Terms";
   };
 
+  // Handle term creation
+  const handleTermCreated = (termId: string) => {
+    setIsCreateTermModalOpen(false);
+    // Automatically select the newly created term
+    handleTermSelect(termId);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -112,7 +121,7 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
               scale: { duration: 0.35 },
               y: { duration: 0.4 }
             }}
-            className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+            className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
           >
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
@@ -207,6 +216,24 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
                 </button>
               ))}
 
+              {/* Create New Term Button */}
+              <button
+                onClick={() => setIsCreateTermModalOpen(true)}
+                className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-300 dark:hover:border-purple-600 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900 dark:hover:bg-opacity-20 transition-all duration-200 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg border-2 border-dashed border-current flex items-center justify-center group-hover:border-solid">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium">Create New Term</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Add a new academic term</div>
+                  </div>
+                </div>
+              </button>
+
               {/* Empty State */}
               {(!terms || terms.length === 0) && (
                 <div className="text-center py-8 px-4">
@@ -243,6 +270,13 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
         </motion.div>
         </div>
       )}
+      
+      {/* Create Term Modal */}
+      <CreateTermModal
+        isOpen={isCreateTermModalOpen}
+        onClose={() => setIsCreateTermModalOpen(false)}
+        onTermCreated={handleTermCreated}
+      />
     </AnimatePresence>
   );
 }

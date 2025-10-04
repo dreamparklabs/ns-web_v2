@@ -29,32 +29,11 @@ export default function Dashboard() {
               <h1 className="text-xl md:text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
                 Dashboard
               </h1>
-              <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-1">
+              <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 mt-1">
                 Welcome back{user?.firstName ? `, ${user.firstName}` : ''}! Here's your academic overview.
               </p>
             </div>
 
-            {/* Global Term Filter Indicator */}
-            {isFilteringByTerm && (
-              <div className="bg-purple-50 dark:bg-purple-900 dark:bg-opacity-30 border border-purple-200 dark:border-purple-700 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                    Filtering by specific term (ID: {globalTermId})
-                  </span>
-                </div>
-                <button 
-                  onClick={() => {
-                    const newSearchParams = new URLSearchParams(searchParams);
-                    newSearchParams.delete("globalTerm");
-                    setSearchParams(newSearchParams);
-                  }}
-                  className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 font-medium"
-                >
-                  Show All Terms
-                </button>
-              </div>
-            )}
 
             {/* Widget Grid - Dynamic Viewport-based */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-3 md:gap-4 xl:gap-5 2xl:gap-6 min-h-0">

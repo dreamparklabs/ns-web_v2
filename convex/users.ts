@@ -133,7 +133,7 @@ export const updateUserDemographics = mutation({
       birthday: args.birthday,
       ethnicity: args.ethnicity,
       gender: args.gender,
-      hasCompletedDemographics: true,
+      // Don't set hasCompletedDemographics here - only when all onboarding is done
       updatedAt: Date.now(),
     });
   },
@@ -193,5 +193,17 @@ export const verifyUserDataCompleteness = query({
       hasActiveTerm,
       isComplete: hasBasicInfo && hasDemographics && hasSchoolInfo && hasActiveTerm,
     };
+  },
+});
+
+// Reset onboarding status (for testing or re-onboarding)
+export const resetOnboardingStatus = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      hasCompletedDemographics: false,
+      hasCompletedGuidedTour: false,
+      updatedAt: Date.now(),
+    });
   },
 });

@@ -1,0 +1,16 @@
+
+> dev
+> react-router dev
+
+Port 5173 is in use, trying another one...
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+6:42:50 PM [vite] (client) page reload browser-extension/popup-simple.html
+6:47:08 PM [vite] (client) page reload browser-extension/popup-simple.html
+6:52:20 PM [react-router] Config saved
+7:06:32 PM [react-router] Config saved
+7:07:02 PM [react-router] Config saved
+7:07:53 PM [react-router] Config saved
+7:08:06 PM [react-router] Config changed.
+7:08:20 PM [react-router] Config changed.

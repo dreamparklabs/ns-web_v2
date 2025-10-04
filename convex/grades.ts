@@ -30,8 +30,8 @@ export const getUserStats = query({
 
 // Get courses with grades for a specific term
 export const getCourseGrades = query({
-  args: { 
-    termId: v.optional(v.id("terms")) 
+  args: {
+    termId: v.optional(v.id("terms"))
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -180,5 +180,113 @@ export const getTerm = query({
     }
 
     return term;
+  },
+});
+
+// Get GPA trend data by calculating GPA for each term
+export const getGPATrend = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Get current user
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("clerkUserId"), identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get all terms for this user
+    const terms = await ctx.db
+      .query("terms")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+
+    // Sort terms by start date (oldest first for trend display)
+    const sortedTerms = terms.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+    // Calculate GPA for each term
+    const gpaTrend = await Promise.all(
+      sortedTerms.map(async (term) => {
+        // Get courses for this term
+        const courses = await ctx.db
+          .query("courses")
+          .filter((q) => q.eq(q.field("userId"), user._id))
+          .filter((q) => q.eq(q.field("termId"), term._id))
+          .collect();
+
+        if (courses.length === 0) {
+          return {
+            termName: term.name,
+            gpa: null, // No GPA if no courses
+            creditHours: 0
+          };
+        }
+
+        // Calculate GPA for each course in this term
+        let totalGradePoints = 0;
+        let totalCreditHours = 0;
+
+        for (const course of courses) {
+          // Get assignments for this course
+          const assignments = await ctx.db
+            .query("assignments")
+            .filter((q) => q.eq(q.field("courseId"), course._id))
+            .filter((q) => q.eq(q.field("userId"), user._id))
+            .collect();
+
+          // Calculate course grade based on assignments
+          const gradedAssignments = assignments.filter(a => a.grade !== undefined);
+
+          if (gradedAssignments.length > 0) {
+            const totalPoints = gradedAssignments.reduce((sum, a) => sum + (a.grade || 0), 0);
+            const averageGrade = totalPoints / gradedAssignments.length;
+
+            // Convert percentage to grade points (4.0 scale)
+            const getGradePoints = (percentage: number): number => {
+              if (percentage >= 97) return 4.0;
+              if (percentage >= 93) return 4.0;
+              if (percentage >= 90) return 3.7;
+              if (percentage >= 87) return 3.3;
+              if (percentage >= 83) return 3.0;
+              if (percentage >= 80) return 2.7;
+              if (percentage >= 77) return 2.3;
+              if (percentage >= 73) return 2.0;
+              if (percentage >= 70) return 1.7;
+              if (percentage >= 67) return 1.3;
+              if (percentage >= 63) return 1.0;
+              if (percentage >= 60) return 0.7;
+              return 0.0;
+            };
+
+            const gradePoints = getGradePoints(averageGrade);
+            const creditHours = course.creditHours || 3; // Default to 3 credit hours if not specified
+
+            totalGradePoints += gradePoints * creditHours;
+            totalCreditHours += creditHours;
+          }
+        }
+
+        // Calculate term GPA
+        const termGPA = totalCreditHours > 0 ? totalGradePoints / totalCreditHours : null;
+
+        return {
+          termName: term.name,
+          gpa: termGPA ? Number(termGPA.toFixed(2)) : null,
+          creditHours: totalCreditHours
+        };
+      })
+    );
+
+    // Filter out terms with no GPA data and return only the most recent 5 terms
+    return gpaTrend
+      .filter(term => term.gpa !== null)
+      .slice(-5); // Get the last 5 terms with GPA data
   },
 });

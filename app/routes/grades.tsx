@@ -1,7 +1,5 @@
 import type { Route } from "./+types/grades";
-import { useState } from "react";
 import { useUser } from "@clerk/clerk-react";
-import { useSearchParams } from "react-router";
 import { useGlobalTerm } from "../hooks/useGlobalTerm";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -16,40 +14,24 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Grades() {
   const { user } = useUser();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { globalTermId, isFilteringByTerm } = useGlobalTerm();
-  
+
   // Get data from Convex
   const userStats = useQuery(api.grades.getUserStats);
   const userTerms = useQuery(api.grades.getUserTerms);
-  
-  // Get active term from URL params or use the most recent term
-  const urlTermId = searchParams.get("termId");
-  const activeTerm = userTerms?.find(term => term._id === urlTermId) || 
-                    (userTerms && userTerms.length > 0 ? userTerms[0] : null);
-  
-  // Use globalTermId if filtering by term, otherwise use activeTerm
-  const selectedTermId = isFilteringByTerm ? globalTermId as Id<"terms"> : activeTerm?._id;
-  
-  // Get course grades for the selected term
-  const courseGrades = useQuery(api.grades.getCourseGrades, 
+  const gpaTrend = useQuery(api.grades.getGPATrend);
+
+  // Use global term filtering - if filtering by term, use globalTermId, otherwise show all terms
+  const selectedTermId = isFilteringByTerm ? globalTermId as Id<"terms"> : undefined;
+
+  // Get course grades - filtered by term if globalTermId is set, otherwise all terms
+  const courseGrades = useQuery(api.grades.getCourseGrades,
     selectedTermId ? { termId: selectedTermId } : {}
   );
-  
-  // Function to update term and URL
-  const setActiveTermById = (termId: Id<"terms">) => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    if (userTerms && userTerms[0]?._id === termId) {
-      // Remove term param when showing most recent term
-      newSearchParams.delete("termId");
-    } else {
-      newSearchParams.set("termId", termId);
-    }
-    setSearchParams(newSearchParams);
-  };
-  
+
+
   // Loading state
-  if (userStats === undefined || userTerms === undefined || courseGrades === undefined) {
+  if (userStats === undefined || userTerms === undefined || courseGrades === undefined || gpaTrend === undefined) {
     return (
       <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="text-center">
@@ -76,27 +58,6 @@ export default function Grades() {
           </div>
         </div>
 
-        {/* Global Term Filter Indicator */}
-        {isFilteringByTerm && (
-          <div className="bg-purple-50 dark:bg-purple-900 dark:bg-opacity-30 border border-purple-200 dark:border-purple-700 rounded-lg p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                Filtering by specific term (ID: {globalTermId})
-              </span>
-            </div>
-            <button 
-              onClick={() => {
-                const newSearchParams = new URLSearchParams(searchParams);
-                newSearchParams.delete("globalTerm");
-                setSearchParams(newSearchParams);
-              }}
-              className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 font-medium"
-            >
-              Show All Terms
-            </button>
-          </div>
-        )}
 
         {/* Grade Grid - Dashboard Style with Dynamic Heights */}
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-3 md:gap-4 xl:gap-5 2xl:gap-6">
@@ -110,7 +71,7 @@ export default function Grades() {
                     {userStats.gpa ? userStats.gpa.toFixed(2) : "0.00"}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {selectedTermId ? `Term: ${activeTerm?.name}` : "Overall GPA"}
+                    {isFilteringByTerm ? `Term: ${userTerms?.find(t => t._id === globalTermId)?.name}` : "Overall GPA"}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
@@ -167,36 +128,11 @@ export default function Grades() {
           {/* Row 2: Term Selector and Grades Table */}
           <div className="col-span-1 md:col-span-4 lg:col-span-12">
             <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
-              {/* Filter Header */}
+              {/* Header */}
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-heading">
-                    Course Grades
-                  </h3>
-
-                  {/* Term Filter Tabs - Dynamic from Database */}
-                  <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-full max-w-full overflow-x-auto">
-                    {userTerms && userTerms.length > 0 ? (
-                      userTerms.slice(0, 5).map((term) => (
-                        <button
-                          key={term._id}
-                          onClick={() => setActiveTermById(term._id)}
-                          className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 whitespace-nowrap ${
-                            activeTerm?._id === term._id
-                              ? "text-white bg-purple-600"
-                              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-600"
-                          }`}
-                        >
-                          {term.name}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        No terms found
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-heading">
+                  Course Grades
+                </h3>
               </div>
 
               {/* Grades Table */}
@@ -250,7 +186,7 @@ export default function Grades() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {course.averageGrade.toFixed(1)}%
+                          {course.averageGrade.toFixed(2)}%
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {course.gradePoints.toFixed(1)}
@@ -267,9 +203,9 @@ export default function Grades() {
                         </svg>
                         <p className="text-lg font-medium">No courses found</p>
                         <p className="text-sm mt-1">
-                          {selectedTermId 
-                            ? `No courses found for ${activeTerm?.name || 'the selected term'}` 
-                            : "No courses found in your account"
+                          {isFilteringByTerm
+                            ? `No courses found for ${userTerms?.find(t => t._id === globalTermId)?.name || 'the selected term'}`
+                            : "No courses with grades found"
                           }
                         </p>
                       </div>
@@ -287,15 +223,15 @@ export default function Grades() {
                       {courseGrades.reduce((sum, course) => sum + course.creditHours, 0)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {courseGrades.length > 0 
-                        ? `GPA: ${(courseGrades.reduce((sum, course) => sum + course.gradePoints, 0) / 
+                      {courseGrades.length > 0
+                        ? `GPA: ${(courseGrades.reduce((sum, course) => sum + course.gradePoints, 0) /
                             courseGrades.reduce((sum, course) => sum + course.creditHours, 0)).toFixed(2)}`
                         : "GPA: 0.00"
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {courseGrades.length > 0 
-                        ? `Avg: ${(courseGrades.reduce((sum, course) => sum + course.averageGrade, 0) / courseGrades.length).toFixed(1)}%`
+                      {courseGrades.length > 0
+                        ? `Avg: ${(courseGrades.reduce((sum, course) => sum + course.averageGrade, 0) / courseGrades.length).toFixed(2)}%`
                         : "Avg: 0%"
                       }
                     </td>
@@ -315,18 +251,36 @@ export default function Grades() {
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 h-full">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">GPA Trend</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Fall 2023</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">3.45</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Spring 2024</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">3.55</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Fall 2024</span>
-                  <span className="text-sm font-medium text-green-600 dark:text-green-400">3.67</span>
-                </div>
+                {gpaTrend && gpaTrend.length > 0 ? (
+                  gpaTrend.map((term, index) => {
+                    // Determine if this is the most recent term (last in array) for highlighting
+                    const isLatest = index === gpaTrend.length - 1;
+                    // Determine if GPA is improving (compare with previous term)
+                    const isImproving = index > 0 && term.gpa && gpaTrend[index - 1].gpa && term.gpa > gpaTrend[index - 1].gpa;
+
+                    return (
+                      <div key={term.termName} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {term.termName}
+                        </span>
+                        <span className={`text-sm font-medium ${
+                          isLatest && isImproving
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {term.gpa?.toFixed(2) || 'N/A'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No GPA trend data available</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      Complete assignments to see your GPA trends
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -334,34 +288,55 @@ export default function Grades() {
           <div className="col-span-1 md:col-span-2 lg:col-span-6">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 h-full">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Grade Distribution</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">A grades</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '40%' }}></div>
+              <div className="space-y-4">
+                {(() => {
+                  // Calculate grade distribution from actual course data
+                  const gradeDistribution = courseGrades?.reduce((acc, course) => {
+                    const grade = course.letterGrade;
+                    if (grade.startsWith('A')) acc.A++;
+                    else if (grade.startsWith('B')) acc.B++;
+                    else if (grade.startsWith('C')) acc.C++;
+                    else if (grade.startsWith('D')) acc.D++;
+                    else if (grade.startsWith('F')) acc.F++;
+                    return acc;
+                  }, { A: 0, B: 0, C: 0, D: 0, F: 0 }) || { A: 0, B: 0, C: 0, D: 0, F: 0 };
+
+                  const totalCourses = courseGrades?.length || 0;
+
+                  const grades = [
+                    { name: 'A grades', count: gradeDistribution.A, color: 'bg-green-600', percentage: totalCourses > 0 ? Math.round((gradeDistribution.A / totalCourses) * 100) : 0 },
+                    { name: 'B grades', count: gradeDistribution.B, color: 'bg-blue-600', percentage: totalCourses > 0 ? Math.round((gradeDistribution.B / totalCourses) * 100) : 0 },
+                    { name: 'C grades', count: gradeDistribution.C, color: 'bg-yellow-600', percentage: totalCourses > 0 ? Math.round((gradeDistribution.C / totalCourses) * 100) : 0 },
+                    { name: 'D grades', count: gradeDistribution.D, color: 'bg-orange-600', percentage: totalCourses > 0 ? Math.round((gradeDistribution.D / totalCourses) * 100) : 0 },
+                    { name: 'F grades', count: gradeDistribution.F, color: 'bg-red-600', percentage: totalCourses > 0 ? Math.round((gradeDistribution.F / totalCourses) * 100) : 0 }
+                  ];
+
+                  return grades.map((grade) => (
+                    <div key={grade.name} className="flex items-center gap-4">
+                      <div className="flex-shrink-0 w-16">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{grade.name}</span>
+                      </div>
+                      <div className="flex-1 flex items-center gap-3">
+                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 min-w-0">
+                          <div
+                            className={`${grade.color} h-2.5 rounded-full transition-all duration-500 ease-out`}
+                            style={{ width: `${grade.percentage}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex-shrink-0 w-10 text-right">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {grade.percentage}%
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">40%</span>
+                  ));
+                })()}
+                {(!courseGrades || courseGrades.length === 0) && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No grade data available</p>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">B grades</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: '60%' }}></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">60%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">C grades</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '0%' }}></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">0%</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

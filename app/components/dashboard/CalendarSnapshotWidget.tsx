@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import DashboardWidget from './DashboardWidget';
+import { useNavigate } from 'react-router';
 
 interface Event {
   _id: string;
@@ -14,7 +15,12 @@ interface Event {
 
 export default function CalendarSnapshotWidget() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+  const navigate = useNavigate();
+
+  const navigateToCalendar = () => {
+    navigate('/app/v2/calendar');
+  };
+
   // This will need to be implemented in Convex
   const events = useQuery(api.events.getEventsForMonth, {
     month: currentDate.getMonth(),
@@ -33,8 +39,8 @@ export default function CalendarSnapshotWidget() {
     if (!events) return false;
     const dayStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getTime();
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-    
-    return events.some(event => 
+
+    return events.some(event =>
       event.startTime >= dayStart && event.startTime < dayEnd
     );
   };
@@ -62,7 +68,7 @@ export default function CalendarSnapshotWidget() {
     const eventClass = hasEvent && !isToday(day) ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : '';
     const hoverClass = isToday(day) ? 'hover:bg-purple-700' : hasEvent ? 'hover:bg-purple-100 dark:hover:bg-purple-900/50' : 'hover:bg-gray-100 dark:hover:bg-gray-700';
     const roundingClass = isToday(day) ? 'rounded-full' : 'rounded';
-    
+
     days.push(
       <div
         key={day}
@@ -84,10 +90,13 @@ export default function CalendarSnapshotWidget() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <DashboardWidget 
-      title="Calendar" 
+    <DashboardWidget
+      title="Calendar"
       headerAction={
-        <button className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200 font-semibold">
+        <button
+          onClick={navigateToCalendar}
+          className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 px-2 py-1 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 font-semibold"
+        >
           Full Calendar
         </button>
       }
@@ -97,20 +106,20 @@ export default function CalendarSnapshotWidget() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-            className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
+            className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 hover:scale-110"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          
+
           <h4 className="text-xs font-semibold text-gray-900 dark:text-white">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h4>
-          
+
           <button
             onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-            className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
+            className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 hover:scale-110"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

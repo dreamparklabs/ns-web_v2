@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #d1ecf1; color: #0c5460; }
+    .warning { background: #fff3cd; color: #856404; }
+    
+    button {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background: #0056b3;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .debug {
+      font-size: 12px;
+      background: #f8f9fa;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .auth-section {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border: 2px solid #dee2e6;
+    }
+
+    .auth-form input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .user-info {
+      background: #d4edda;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 12px;
+      color: #155724;
+    }
+
+    .section {
+      margin: 15px 0;
+      padding: 10px;
+      border-left: 4px solid #007bff;
+      background: #f8f9fa;
+    }
+
+    .section h4 {
+      margin: 0 0 10px 0;
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <h2>🌟 Northstar D2L Sync</h2>
+  
+  <div id="status" class="status info">Checking...</div>
+
+  <!-- Authentication Section -->
+  <div id="auth-section" class="auth-section" style="display: none;">
+    <h4>🔐 Login to Northstar</h4>
+    
+    <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 12px;">
+      <strong>🚀 Quick Setup:</strong><br>
+      1. Sign in to Northstar in your browser<br>
+      2. Click "Check Session" below<br>
+      3. Start syncing assignments!
+    </div>
+    
+    <button id="check-session-btn" style="background: #2196f3; margin-bottom: 10px;">🔄 Check Session</button>
+    
+    <div style="text-align: center; margin: 10px 0; color: #666; font-size: 12px;">
+      — OR —
+    </div>
+    
+    <div id="auth-form" class="auth-form">
+      <button id="login-btn" style="background: #28a745; margin-bottom: 5px;">🔑 Sign In</button>
+      <button id="signup-btn" style="background: #6c757d;">📝 Sign Up</button>
+      
+      <div style="font-size: 11px; color: #666; margin-top: 10px; text-align: center;">
+        Secure authentication via Northstar
+      </div>
+    </div>
+  </div>
+
+  <!-- User Info Section -->
+  <div id="user-info" class="user-info" style="display: none;">
+    <div id="user-details"></div>
+    <button id="logout-btn" style="background: #dc3545; font-size: 12px; padding: 5px;">Sign Out</button>
+  </div>
+
+  <!-- D2L Extraction Section -->
+  <div id="extraction-section" class="section">
+    <h4>📚 D2L Data Extraction</h4>
+    <button id="ping-btn">Ping Content Script</button>
+    <button id="inject-btn" style="background: #28a745;">Force Inject Script</button>
+    <button id="extract-btn">Test Extract</button>
+    <button id="extract-all-btn" style="background: #ff6b35; color: white; font-weight: bold;">🚀 Extract All Data</button>
+    <button id="extract-all-courses-btn" style="background: #e74c3c; color: white; font-weight: bold;">🌟 Extract ALL COURSES</button>
+  </div>
+
+  <!-- Sync Section -->
+  <div id="sync-section" class="section" style="display: none;">
+    <h4>🔄 Sync to Northstar</h4>
+    <div id="sync-info" style="font-size: 12px; margin-bottom: 10px;"></div>
+    <button id="sync-btn" style="background: #17a2b8; color: white; font-weight: bold;">📤 Sync to Northstar</button>
+  </div>
+
+  <!-- Auto-Sync Settings -->
+  <div class="section">
+    <h4>⚙️ Auto-Sync Settings</h4>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+      <label for="auto-sync-toggle" style="font-size: 14px;">Auto-sync when logging into D2L:</label>
+      <input type="checkbox" id="auto-sync-toggle" style="transform: scale(1.2);">
+    </div>
+    <p style="font-size: 12px; color: #666; margin: 0;">
+      When enabled, Northstar will automatically sync your D2L data when you log into D2L
+    </p>
+  </div>
+
+  <!-- Debug Section -->
+  <div class="section">
+    <button id="debug-btn">Show Debug Info</button>
+  </div>
+  
+  <div id="result" class="debug" style="display: none;"></div>
+  
+  <script src="popup-simple.js"></script>
+</body>
+</html>

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useUser } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Id } from "../../convex/_generated/dataModel";
+import FileUpload from "./FileUpload";
+import FileViewerModal from "./FileViewerModal";
 
 interface EditAssignmentModalProps {
   isOpen: boolean;
@@ -20,47 +22,77 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [assignmentType, setAssignmentType] = useState("assignment");
   const [maxPoints, setMaxPoints] = useState("");
-  const [grade, setGrade] = useState("");
+  const [gradeReceived, setGradeReceived] = useState("");
   const [status, setStatus] = useState("todo");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
+  // URL-based file viewer state
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const viewerFileId = searchParams.get('view-file') as Id<"files"> | null;
+  const isViewerOpen = Boolean(viewerFileId);
+
   const modalRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  
+
   const { user } = useUser();
-  const navigate = useNavigate();
   
+
   // Get user's courses for the dropdown
   const courses = useQuery(
     api.courses.getUserCourses,
     user?.id ? { clerkUserId: user.id } : "skip"
   );
-  
+
   // Get assignment data for editing
   const assignment = useQuery(
     api.assignments.getAssignment,
     assignmentId ? { assignmentId } : "skip"
   );
-  
+
+  // Get files for this assignment
+  const assignmentFiles = useQuery(
+    api.files.getAssignmentFiles,
+    assignmentId && user?.id ? { assignmentId, clerkUserId: user.id } : "skip"
+  );
+
   // Mutations
   const updateAssignment = useMutation(api.assignments.updateAssignment);
   const deleteAssignment = useMutation(api.assignments.deleteAssignment);
+  const deleteFile = useMutation(api.files.deleteFile);
+  const resetAssignmentProtection = useMutation(api.assignments.resetAssignmentProtection);
+
+  // Get Convex client for direct queries
+  const convex = useConvex();
 
   // Populate form when assignment data loads
   useEffect(() => {
     if (assignment && isOpen) {
       setTitle(assignment.title);
       setDescription(assignment.notes || "");
-      
-      // Convert timestamp to date and time
-      const dueDateTime = new Date(assignment.dueAt);
-      setDueDate(dueDateTime.toISOString().split('T')[0]);
-      setDueTime(dueDateTime.toTimeString().slice(0, 5));
-      
+
+      // Convert timestamp to date and time - handle null/undefined dueAt
+      if (assignment.dueAt) {
+        const dueDateTime = new Date(assignment.dueAt);
+        if (!isNaN(dueDateTime.getTime())) {
+          setDueDate(dueDateTime.toISOString().split('T')[0]);
+          setDueTime(dueDateTime.toTimeString().slice(0, 5));
+        } else {
+          // Invalid date, set defaults
+          setDueDate("");
+          setDueTime("23:59"); // Default to 11:59 PM
+        }
+      } else {
+        // No due date set
+        setDueDate("");
+        setDueTime("23:59"); // Default to 11:59 PM
+      }
+
       setSelectedCourseId(assignment.courseId);
-      setAssignmentType("assignment"); // Default since type isn't in schema
-      setMaxPoints(""); // Not in current schema
-      setGrade(assignment.grade?.toString() || "");
+      setAssignmentType(assignment.type || "assignment");
+      setMaxPoints(assignment.maxPoints?.toString() || "");
+      setGradeReceived(assignment.pointsEarned?.toString() || "");
       setStatus(assignment.status);
     }
   }, [assignment, isOpen]);
@@ -75,7 +107,7 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
       setSelectedCourseId("");
       setAssignmentType("assignment");
       setMaxPoints("");
-      setGrade("");
+      setGradeReceived("");
       setStatus("todo");
       setIsSubmitting(false);
       titleInputRef.current?.focus();
@@ -85,27 +117,36 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !selectedCourseId || !dueDate || !dueTime || !assignmentId) return;
-    
+    if (!title.trim() || !selectedCourseId || !assignmentId) return;
+
     setIsSubmitting(true);
-    
+
     try {
-      // Combine date and time properly without timezone conversion issues
-      const dueDateTimeString = `${dueDate}T${dueTime}:00`;
-      const dueDateTimeLocal = new Date(dueDateTimeString);
-      
+      // Handle optional due date
+      let dueDateTimestamp = undefined;
+      if (dueDate && dueTime) {
+        const dueDateTimeString = `${dueDate}T${dueTime}:00`;
+        const dueDateTimeLocal = new Date(dueDateTimeString);
+        if (!isNaN(dueDateTimeLocal.getTime())) {
+          dueDateTimestamp = dueDateTimeLocal.getTime();
+        }
+      }
+
       await updateAssignment({
         assignmentId,
         title: title.trim(),
         description: description.trim() || undefined,
-        dueDate: dueDateTimeLocal.getTime(),
-        grade: grade ? parseFloat(grade) : undefined,
+        type: assignmentType,
+        dueDate: dueDateTimestamp,
+        maxPoints: maxPoints ? parseFloat(maxPoints) : undefined,
+        pointsEarned: gradeReceived ? parseFloat(gradeReceived) : undefined,
         status: status
       });
-      
+
       onClose();
     } catch (error) {
       console.error("Failed to update assignment:", error);
+      alert("Failed to update assignment. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -114,12 +155,12 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
   // Handle delete
   const handleDelete = async () => {
     if (!assignmentId) return;
-    
+
     const confirmed = window.confirm("Are you sure you want to delete this assignment? This action cannot be undone.");
     if (!confirmed) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       await deleteAssignment({ assignmentId });
       onClose();
@@ -162,6 +203,168 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
 
   const today = new Date().toISOString().split('T')[0];
 
+  const handleFileUploaded = () => {
+    // File uploaded successfully - the query will automatically refetch
+    console.log("File uploaded successfully");
+  };
+
+  const handleDeleteFile = async (fileId: Id<"files">) => {
+    if (!user?.id) return;
+
+    const confirmed = window.confirm("Are you sure you want to delete this file? This action cannot be undone.");
+    if (!confirmed) return;
+
+    try {
+      await deleteFile({ fileId, clerkUserId: user.id });
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+      alert("Failed to delete file. Please try again.");
+    }
+  };
+
+  const handleSecureDownload = async (fileId: Id<"files">, fileName: string) => {
+    if (!user?.id) return;
+
+    try {
+      // Use the secure Convex query to verify access and get download URL
+      const fileAccess = await convex.query(api.files.verifyFileAccess, {
+        fileId,
+        clerkUserId: user.id,
+      });
+
+      if (!fileAccess.hasAccess || !fileAccess.downloadUrl) {
+        throw new Error(fileAccess.error || 'Access denied');
+      }
+
+      // Fetch the file content from the secure Convex storage URL
+      const response = await fetch(fileAccess.downloadUrl);
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get the file content as blob
+      const blob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download file:", error);
+      alert(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleViewFile = (fileId: Id<"files">) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('view-file', fileId);
+    navigate(`${location.pathname}?${newSearchParams.toString()}`);
+  };
+
+  const handleCloseViewer = () => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('view-file');
+    const searchString = newSearchParams.toString();
+    navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
+  };
+
+  const handleResetProtection = async (fields?: string[]) => {
+    if (!assignmentId) return;
+
+    const confirmed = window.confirm(
+      fields
+        ? `Allow D2L sync to update the ${fields.join(', ')} field${fields.length > 1 ? 's' : ''} for this assignment?`
+        : "Allow D2L sync to update all fields for this assignment? This will remove all protection from your manual changes."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await resetAssignmentProtection({ assignmentId, fields });
+      // The assignment data will automatically refresh via the query
+    } catch (error) {
+      console.error("Failed to reset assignment protection:", error);
+      alert("Failed to reset protection. Please try again.");
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (mimeType: string, fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+
+    if (mimeType.startsWith('image/')) {
+      return (
+        <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+
+    switch (extension) {
+      case 'pdf':
+        return (
+          <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        );
+      case 'doc':
+      case 'docx':
+        return (
+          <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        );
+    }
+  };
+
+  // Helper functions for field protection
+  const isFieldProtected = (fieldName: string) => {
+    return assignment?.userModifiedFields?.includes(fieldName) || false;
+  };
+
+  const getProtectedFields = () => {
+    return assignment?.userModifiedFields || [];
+  };
+
+  const hasAnyProtectedFields = () => {
+    return getProtectedFields().length > 0;
+  };
+
+  const renderFieldProtectionIcon = (fieldName: string) => {
+    if (!isFieldProtected(fieldName)) return null;
+
+    return (
+      <div className="flex items-center gap-1 ml-2" title="This field is protected from D2L sync">
+        <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+        </svg>
+        <span className="text-xs text-amber-600 dark:text-amber-400">Protected</span>
+      </div>
+    );
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -175,22 +378,22 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
             className="fixed inset-0 backdrop-blur-sm"
             onClick={onClose}
           />
-          
+
           {/* Modal */}
           <motion.div
             ref={modalRef}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ 
-              duration: 0.4, 
+            transition={{
+              duration: 0.4,
               ease: [0.16, 1, 0.3, 1], // Custom cubic bezier for smooth motion
               scale: { duration: 0.35 },
               y: { duration: 0.4 }
             }}
             className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
           >
-        
+
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -211,9 +414,12 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Title */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Assignment Title *
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Assignment Title *
+              </label>
+              {renderFieldProtectionIcon('title')}
+            </div>
             <input
               ref={titleInputRef}
               id="title"
@@ -271,9 +477,12 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Due Date */}
             <div>
-              <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Due Date *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Due Date *
+                </label>
+                {renderFieldProtectionIcon('dueAt')}
+              </div>
               <input
                 id="dueDate"
                 type="date"
@@ -300,31 +509,56 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
             </div>
           </div>
 
-          {/* Grade and Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Grade */}
+          {/* Grade Information */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Grade Received */}
             <div>
-              <label htmlFor="grade" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Grade (Optional)
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="gradeReceived" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Grade Received (Optional)
+                </label>
+                {renderFieldProtectionIcon('pointsEarned')}
+              </div>
               <input
-                id="grade"
+                id="gradeReceived"
                 type="number"
                 min="0"
-                max="100"
                 step="0.1"
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                placeholder="Enter grade (0-100)..."
+                value={gradeReceived}
+                onChange={(e) => setGradeReceived(e.target.value)}
+                placeholder="Points earned..."
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+              />
+            </div>
+
+            {/* Max Points */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="maxPoints" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Max Points (Optional)
+                </label>
+                {renderFieldProtectionIcon('maxPoints')}
+              </div>
+              <input
+                id="maxPoints"
+                type="number"
+                min="0"
+                step="0.1"
+                value={maxPoints}
+                onChange={(e) => setMaxPoints(e.target.value)}
+                placeholder="Total possible..."
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
               />
             </div>
 
             {/* Status */}
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Status
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Status
+                </label>
+                {renderFieldProtectionIcon('status')}
+              </div>
               <select
                 id="status"
                 value={status}
@@ -338,11 +572,69 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
             </div>
           </div>
 
+          {/* Grade Percentage Display */}
+          {gradeReceived && maxPoints && parseFloat(maxPoints) > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Calculated Grade: {((parseFloat(gradeReceived) / parseFloat(maxPoints)) * 100).toFixed(2)}%
+                </span>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                This percentage will be saved automatically when you update the assignment.
+              </p>
+            </div>
+          )}
+
+          {/* Protected Fields Notification */}
+          {hasAnyProtectedFields() && (
+            <div className="bg-amber-50 dark:bg-amber-900 dark:bg-opacity-30 rounded-lg p-4 border border-amber-200 dark:border-amber-700">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Protected Fields
+                  </h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    The following fields are protected from D2L sync because you've manually modified them: <strong>{getProtectedFields().join(', ')}</strong>
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleResetProtection()}
+                      className="text-xs bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-3 py-1 rounded-full hover:bg-amber-200 dark:hover:bg-amber-700 transition-colors"
+                    >
+                      Allow sync for all fields
+                    </button>
+                    {getProtectedFields().map((field) => (
+                      <button
+                        key={field}
+                        type="button"
+                        onClick={() => handleResetProtection([field])}
+                        className="text-xs bg-white dark:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600 px-3 py-1 rounded-full hover:bg-amber-50 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Allow sync for {field}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Description (Optional)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Description (Optional)
+              </label>
+              {renderFieldProtectionIcon('notes')}
+            </div>
             <textarea
               id="description"
               rows={4}
@@ -353,17 +645,74 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
             />
           </div>
 
-          {/* File Upload Section (Placeholder) */}
+          {/* File Upload Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Files (Coming Soon)
+              Files
             </label>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">File upload functionality coming soon</p>
-            </div>
+
+            {/* Existing Files */}
+            {assignmentFiles && assignmentFiles.length > 0 && (
+              <div className="mb-4 space-y-2">
+                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Uploaded Files</h4>
+                {assignmentFiles.map((file) => (
+                  <div key={file._id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex-shrink-0">
+                      {getFileIcon(file.mimeType, file.originalFileName)}
+                    </div>
+
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleViewFile(file._id)}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                        {file.originalFileName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatFileSize(file.fileSize)} • {new Date(file.uploadedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleViewFile(file._id)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1"
+                        title="View file"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleSecureDownload(file._id, file.originalFileName)}
+                        className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 p-1"
+                        title="Download file"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFile(file._id)}
+                        className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1"
+                        title="Delete file"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* File Upload Component */}
+            <FileUpload
+              assignmentId={assignmentId}
+              onFileUploaded={handleFileUploaded}
+              maxFiles={10}
+              maxSize={100 * 1024 * 1024} // 100MB to support larger PDFs
+              acceptedTypes={['.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.doc', '.docx', '.txt']}
+            />
           </div>
         </form>
 
@@ -395,7 +744,7 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
               <button
                 type="submit"
                 onClick={handleSubmit}
-                disabled={!title.trim() || !selectedCourseId || !dueDate || !dueTime || isSubmitting}
+                disabled={!title.trim() || !selectedCourseId || isSubmitting}
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-purple-600 rounded-full hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {isSubmitting ? (
@@ -415,6 +764,14 @@ export default function EditAssignmentModal({ isOpen, onClose, assignmentId }: E
           </motion.div>
         </div>
       )}
+
+      {/* File Viewer Modal */}
+      <FileViewerModal
+        isOpen={isViewerOpen}
+        onClose={handleCloseViewer}
+        fileId={viewerFileId}
+        fileName={undefined}
+      />
     </AnimatePresence>
   );
 }

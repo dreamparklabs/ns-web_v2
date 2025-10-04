@@ -13,10 +13,21 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as aiParser from "../aiParser.js";
+import type * as assignmentMaster from "../assignmentMaster.js";
 import type * as assignments from "../assignments.js";
+import type * as autoSync from "../autoSync.js";
 import type * as courses from "../courses.js";
+import type * as d2l from "../d2l.js";
+import type * as d2lAPI from "../d2lAPI.js";
+import type * as d2lOAuth from "../d2lOAuth.js";
+import type * as d2lScraper from "../d2lScraper.js";
+import type * as emailParser from "../emailParser.js";
 import type * as events from "../events.js";
+import type * as files from "../files.js";
 import type * as grades from "../grades.js";
+import type * as icsParser from "../icsParser.js";
+import type * as ltiIntegration from "../ltiIntegration.js";
 import type * as onboarding from "../onboarding.js";
 import type * as seed from "../seed.js";
 import type * as terms from "../terms.js";
@@ -31,10 +42,21 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  aiParser: typeof aiParser;
+  assignmentMaster: typeof assignmentMaster;
   assignments: typeof assignments;
+  autoSync: typeof autoSync;
   courses: typeof courses;
+  d2l: typeof d2l;
+  d2lAPI: typeof d2lAPI;
+  d2lOAuth: typeof d2lOAuth;
+  d2lScraper: typeof d2lScraper;
+  emailParser: typeof emailParser;
   events: typeof events;
+  files: typeof files;
   grades: typeof grades;
+  icsParser: typeof icsParser;
+  ltiIntegration: typeof ltiIntegration;
   onboarding: typeof onboarding;
   seed: typeof seed;
   terms: typeof terms;

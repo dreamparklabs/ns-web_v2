@@ -8,6 +8,7 @@ import EditAssignmentModal from "./EditAssignmentModal";
 import AddClassModal from "./AddClassModal";
 import TermSelectorModal from "./TermSelectorModal";
 import SettingsModal from "./SettingsModal";
+import FileViewerModal from "./FileViewerModal";
 import UserDropdown from "./UserDropdown";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -29,6 +30,15 @@ const navigationItems: NavigationItem[] = [
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2H3a2 2 0 00-2 2v2z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Calendar',
+    href: '/app/v2/calendar',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2v12a2 2 0 002 2z" />
       </svg>
     ),
   },
@@ -59,6 +69,15 @@ const navigationItems: NavigationItem[] = [
       </svg>
     ),
   },
+      {
+        name: 'Progress',
+        href: '/app/v2/analytics',
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        ),
+      },
   {
     name: 'Files',
     href: '/app/v2/files',
@@ -99,10 +118,13 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
   const isAddClassModalOpen = searchParams.has('new-class');
   const isTermSelectorModalOpen = searchParams.has('term-selector');
   const isSettingsModalOpen = searchParams.has('settings');
+  const isFileViewerModalOpen = searchParams.has('view-file');
   
   // Get assignment ID from URL for editing
   const editAssignmentId = searchParams.get('edit-assignment') as Id<"assignments"> | null;
 
+  // Get file ID from URL for viewing
+  const viewFileId = searchParams.get('view-file') as Id<"files"> | null;
   const isCurrentPath = useCallback((href: string) => {
     return currentPath === href;
   }, [currentPath]);
@@ -199,6 +221,13 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
   const closeSettingsModal = () => {
     const newSearchParams = new URLSearchParams(location.search);
     newSearchParams.delete('settings');
+    const searchString = newSearchParams.toString();
+    navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
+  };
+
+  const closeFileViewerModal = () => {
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.delete('view-file');
     const searchString = newSearchParams.toString();
     navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
   };
@@ -562,6 +591,14 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
       <SettingsModal 
         isOpen={isSettingsModalOpen} 
         onClose={closeSettingsModal} 
+      />
+
+      {/* File Viewer Modal */}
+      <FileViewerModal
+        isOpen={isFileViewerModalOpen}
+        onClose={closeFileViewerModal}
+        fileId={viewFileId}
+        fileName={undefined}
       />
     </>
   );
