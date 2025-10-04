@@ -57,7 +57,7 @@ export const getD2LConfiguration = query({
   args: { clerkUserId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null; // Return null instead of throwing error
 
     const config = await ctx.db
       .query("d2lConfigurations")
@@ -151,7 +151,7 @@ export const getD2LConfigurationFull = query({
   args: { clerkUserId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null; // Return null instead of throwing error
 
     return await ctx.db
       .query("d2lConfigurations")
