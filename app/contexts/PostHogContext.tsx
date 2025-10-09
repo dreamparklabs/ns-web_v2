@@ -22,26 +22,31 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       
       posthog.init(POSTHOG_KEY, {
         api_host: POSTHOG_HOST,
+        defaults: '2025-05-24',
         person_profiles: "identified_only",
         capture_pageview: true, // Automatically capture page views
-        capture_pageleave: true, // Track when users leave pages
+        capture_pageleave: false, // Disable page leave tracking to reduce load
         autocapture: {
-          // Capture all clicks, inputs, form submissions
-          dom_event_allowlist: ['click', 'change', 'submit', 'input'],
+          // Capture only essential events to reduce load
+          dom_event_allowlist: ['click', 'submit'],
           url_allowlist: [window.location.origin], // Only track our domain
-          element_allowlist: ['a', 'button', 'form', 'input', 'select', 'textarea', 'label'],
+          element_allowlist: ['a', 'button', 'form'], // Reduced element list
           css_selector_allowlist: ['[ph-capture]'], // Custom attribute for tracking
         },
-        disable_session_recording: false, // Enable session recordings
+        disable_session_recording: true, // Disable session recordings to prevent timeouts
         session_recording: {
-          maskAllInputs: false, // DON'T mask inputs - capture everything (privacy warning!)
+          maskAllInputs: true, // Mask inputs for privacy
           maskTextSelector: "[data-private]", // Only mask elements with data-private attribute
-          recordCrossOriginIframes: true, // Record iframes
+          recordCrossOriginIframes: false, // Disable iframe recording
         },
-        // Advanced tracking
-        capture_performance: true, // Track performance metrics
-        enable_recording_console_log: true, // Capture console logs
-        capture_dead_clicks: true, // Capture rage clicks and dead clicks
+        // Reduced tracking to prevent timeouts
+        capture_performance: false, // Disable performance metrics
+        enable_recording_console_log: false, // Disable console log capture
+        capture_dead_clicks: false, // Disable dead click tracking
+        // Add timeout configuration
+        request_timeout_ms: 10000, // 10 second timeout
+        batch_events: true, // Batch events to reduce requests
+        batch_size: 50, // Batch size
         loaded: function(posthog) {
           console.log('✅ PostHog: Successfully initialized and loaded!');
         },
@@ -88,4 +93,3 @@ export function usePostHog() {
   }
   return context.posthog;
 }
-

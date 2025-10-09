@@ -292,3 +292,6 @@ class UniversalD2LIntegration {
 
 **With LTI, you can achieve universal D2L access in 4-6 weeks without requiring any credentials from individual institutions!** 🚀
 
+
+
+

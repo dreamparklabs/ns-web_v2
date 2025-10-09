@@ -58,7 +58,7 @@ export const getUserByClerkId = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("clerkUserId"), args.clerkUserId))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", args.clerkUserId))
       .first();
   },
 });
@@ -205,5 +205,21 @@ export const resetOnboardingStatus = mutation({
       hasCompletedGuidedTour: false,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Get user by ID (for actions)
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
+// Get all users (for daily updates)
+export const getAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
   },
 });

@@ -428,3 +428,6 @@ async function extractDataFromAllCourses() {
   return combinedData;
 }
 
+
+
+

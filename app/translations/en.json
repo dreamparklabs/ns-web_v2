@@ -1,0 +1,247 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "yes": "Yes",
+    "no": "No",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create",
+    "update": "Update",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "warning": "Warning",
+    "info": "Information",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign Up",
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "assignments": "Assignments",
+    "classes": "Classes",
+    "grades": "Grades",
+    "files": "Files",
+    "analytics": "Analytics",
+    "billing": "Billing"
+  },
+  "navigation": {
+    "mainMenu": "MAIN MENU",
+    "quickActions": "QUICK ACTIONS",
+    "addTask": "Add Task",
+    "addClass": "Add Class",
+    "uploadFile": "Upload File"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account and preferences",
+    "tabs": {
+      "profile": "Profile",
+      "notifications": "Notifications",
+      "preferences": "Preferences",
+      "billing": "Billing",
+      "d2lIntegration": "D2L Integration",
+      "assignmentMaster": "Assignment Master"
+    },
+    "profile": {
+      "title": "Profile Information",
+      "fullName": "Full Name",
+      "emailAddress": "Email Address",
+      "userId": "User ID",
+      "notProvided": "Not provided",
+      "accountManagement": "Account Management",
+      "accountManagementDesc": "Profile information is managed through Clerk authentication",
+      "manageAccount": "Manage Account"
+    },
+    "notifications": {
+      "title": "Notification Preferences",
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsDesc": "Receive notifications via email",
+      "pushNotifications": "Push Notifications",
+      "pushNotificationsDesc": "Receive push notifications in browser",
+      "projectUpdates": "Project Updates",
+      "projectUpdatesDesc": "Get notified about project changes"
+    },
+    "preferences": {
+      "title": "Application Preferences",
+      "theme": "Theme",
+      "themeDesc": "Choose your preferred theme",
+      "themeOptions": {
+        "system": "System Default",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "language": "Language",
+      "languageDesc": "Select your preferred language",
+      "languageOptions": {
+        "en": "English",
+        "es": "Spanish",
+        "fr": "French",
+        "de": "German"
+      },
+      "unsavedChanges": "You have unsaved changes",
+      "resetToDefaults": "Reset to defaults"
+    },
+    "billing": {
+      "title": "Billing & Usage",
+      "currentSubscription": "Current Subscription",
+      "planDetails": "Plan Details",
+      "plan": "Plan",
+      "status": "Status",
+      "actions": "Actions",
+      "updatePaymentMethod": "Update Payment Method",
+      "cancelSubscription": "Cancel Subscription",
+      "availablePlans": "Available Plans",
+      "billingInformation": "Billing Information",
+      "billingInfo": {
+        "autoRenew": "All subscriptions are billed monthly and automatically renew",
+        "cancelAnytime": "You can cancel your subscription at any time",
+        "cancellationEffect": "Cancellations take effect at the end of your current billing period",
+        "usageReset": "Usage is calculated monthly and resets on your billing date",
+        "pricing": "All prices are in USD and exclude applicable taxes"
+      },
+      "plans": {
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "/month",
+          "features": [
+            "Unified Dashboard",
+            "Basic assignment tracking",
+            "Calendar integration",
+            "File storage (5GB)",
+            "2 Terms"
+          ]
+        },
+        "studentPro": {
+          "name": "Student Pro",
+          "price": "$9.99",
+          "period": "/month",
+          "annualPrice": "or $8.99/month billed annually",
+          "trialDays": "14-day free trial",
+          "features": [
+            "All Free features",
+            "Grade analytics & insights",
+            "AI-powered recommendations",
+            "Unlimited file storage",
+            "Unlimited Terms"
+          ]
+        }
+      },
+      "usage": {
+        "currentPlan": "Plan",
+        "monthlyCost": "Monthly Cost",
+        "aiUsage": "AI Usage",
+        "storage": "Storage",
+        "planDetails": "Plan Details",
+        "aiTokensUsed": "AI Tokens Used",
+        "storageUsed": "Storage Used",
+        "planType": "Plan Type",
+        "free": "Free",
+        "pro": "Pro",
+        "upgradeRecommended": "Upgrade Recommended",
+        "upgradeReason": "You're approaching your usage limits. Upgrade to Student Pro for unlimited access.",
+        "upgradeFeatures": [
+          "Unlimited AI usage",
+          "Unlimited file storage",
+          "Grade analytics & insights",
+          "AI-powered recommendations"
+        ]
+      }
+    },
+    "d2l": {
+      "title": "D2L Brightspace Integration",
+      "integrationMethods": "Integration Methods",
+      "integrationDesc": "Choose how to connect your D2L Brightspace account:",
+      "apiIntegration": "D2L API Integration (Best)",
+      "apiIntegrationDesc": "Official D2L API with real-time sync",
+      "ssoIntegration": "SSO Integration (Legacy)",
+      "ssoIntegrationDesc": "Uses your school's login system",
+      "webScraping": "Web Scraping (Alternative)",
+      "webScrapingDesc": "When OAuth is not available",
+      "icsCalendarFeed": "ICS Calendar Feed (Instant)",
+      "icsCalendarFeedDesc": "Paste your D2L calendar feed URL for immediate sync",
+      "aiFeatures": "AI-Powered Features",
+      "aiFeaturesList": [
+        "Automatically parse announcements for hidden assignments",
+        "Intelligent content analysis of course modules",
+        "Smart due date extraction from text",
+        "Assignment type classification"
+      ],
+      "syncFeatures": "Sync Features",
+      "syncFeaturesList": [
+        "Course enrollments and details",
+        "Assignment dropboxes with due dates",
+        "Quizzes and exams",
+        "Graded discussion forums",
+        "News and announcements",
+        "Calendar events"
+      ]
+    },
+    "assignmentMaster": {
+      "title": "Assignment Master Database",
+      "universalCollection": "Universal Assignment Collection",
+      "universalCollectionDesc": "Automatically collect assignments from multiple sources without requiring API access:",
+      "manageDatabase": "Manage Assignment Master Database",
+      "manageDatabaseDesc": "ICS feeds, email parsing, and source consolidation",
+      "icsCalendarFeeds": "ICS Calendar Feeds",
+      "icsCalendarFeedsList": [
+        "Export calendar from D2L",
+        "Automatic assignment detection",
+        "Smart due date parsing",
+        "Course auto-linking"
+      ],
+      "emailIntegration": "Email Integration",
+      "emailIntegrationList": [
+        "Parse D2L notifications",
+        "Grade update alerts",
+        "New assignment notifications",
+        "Announcement parsing"
+      ],
+      "conflictResolution": "Smart Conflict Resolution",
+      "conflictResolutionList": [
+        "Automatic duplicate detection",
+        "Intelligent data merging",
+        "Source confidence scoring",
+        "Manual review interface",
+        "Priority-based resolution"
+      ],
+      "noApiAccess": "Works Without API Access",
+      "noApiAccessDesc": "The Assignment Master Database uses exported calendar feeds and email notifications, so it works at any institution without requiring special API permissions."
+    }
+  },
+  "messages": {
+    "settingsSaved": "Settings saved successfully!",
+    "settingsSavedDesc": "Your theme and language preferences have been saved.",
+    "subscriptionCanceled": "Subscription canceled successfully!",
+    "subscriptionCanceledDesc": "You will retain access until the end of your billing period.",
+    "subscriptionCreated": "Subscription created successfully!",
+    "subscriptionCreatedDesc": "Welcome to Student Pro!",
+    "cancelSubscriptionConfirm": "Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing period.",
+    "paymentMethodUpdate": "Payment method update coming soon!",
+    "subscriptionFailed": "Failed to cancel subscription. Please try again.",
+    "subscribeFailed": "Failed to subscribe to plan. Please try again."
+  },
+  "ui": {
+    "escToClose": "ESC to close",
+    "saveChanges": "Save Changes",
+    "currentPlan": "Current Plan",
+    "mostPopular": "Most Popular",
+    "subscribeToStudentPro": "Subscribe to Student Pro",
+    "chooseYourPlan": "Choose Your Plan",
+    "selectPlanDesc": "Select the plan that best fits your academic needs"
+  }
+}

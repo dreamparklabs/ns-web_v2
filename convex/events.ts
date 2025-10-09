@@ -175,3 +175,33 @@ export const createEvent = mutation({
     });
   },
 });
+
+// Get a single event by ID
+export const getEvent = query({
+  args: {
+    eventId: v.id("events")
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const event = await ctx.db.get(args.eventId);
+    
+    if (!event || event.userId !== user._id) {
+      throw new Error("Event not found");
+    }
+
+    return event;
+  },
+});

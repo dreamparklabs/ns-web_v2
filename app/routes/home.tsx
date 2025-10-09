@@ -11,13 +11,32 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { needsOnboarding, isUserReady } = useUserSetup();
+  const { needsOnboarding, isUserReady, convexUser, user, isLoaded, isCreatingUser, userCreationFailed } = useUserSetup();
   const navigate = useNavigate();
+
+  // Debug logging (disabled for production)
+  // console.log('Home component state:', {
+  //   needsOnboarding,
+  //   isUserReady,
+  //   hasConvexUser: !!convexUser,
+  //   hasClerkUser: !!user,
+  //   isLoaded,
+  //   isCreatingUser,
+  //   userCreationFailed
+  // });
 
   // Determine the correct dashboard URL based on onboarding status
   const getDashboardUrl = () => {
-    if (!isUserReady) return "/onboarding"; // Default while loading
+    // Ensure isUserReady is treated as boolean
+    const userReady = Boolean(isUserReady);
+    
+    if (!userReady) return "/onboarding"; // Default while loading
     return needsOnboarding ? "/onboarding" : "/app/v2/dashboard";
+  };
+
+  const handleGoToDashboard = () => {
+    const url = getDashboardUrl();
+    navigate(url);
   };
 
   return (
@@ -60,8 +79,8 @@ export default function Home() {
             gap: 'var(--space-3)',
             alignItems: 'center'
           }}>
-            <button
-              onClick={() => navigate(getDashboardUrl())}
+                <button
+                  onClick={handleGoToDashboard}
               style={{
                 width: '100%',
                 padding: '14px 16px',
@@ -79,6 +98,7 @@ export default function Home() {
             >
               Go to Dashboard
             </button>
+            
             <div style={{ marginTop: 'var(--space-2)' }}>
               <UserButton
                 appearance={{

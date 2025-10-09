@@ -1,0 +1,247 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "yes": "Sí",
+    "no": "No",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "create": "Crear",
+    "update": "Actualizar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "refresh": "Actualizar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "reset": "Restablecer",
+    "confirm": "Confirmar",
+    "warning": "Advertencia",
+    "info": "Información",
+    "settings": "Configuración",
+    "profile": "Perfil",
+    "logout": "Cerrar Sesión",
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse",
+    "dashboard": "Panel de Control",
+    "calendar": "Calendario",
+    "assignments": "Tareas",
+    "classes": "Clases",
+    "grades": "Calificaciones",
+    "files": "Archivos",
+    "analytics": "Analíticas",
+    "billing": "Facturación"
+  },
+  "navigation": {
+    "mainMenu": "MENÚ PRINCIPAL",
+    "quickActions": "ACCIONES RÁPIDAS",
+    "addTask": "Agregar Tarea",
+    "addClass": "Agregar Clase",
+    "uploadFile": "Subir Archivo"
+  },
+  "settings": {
+    "title": "Configuración",
+    "subtitle": "Gestiona tu cuenta y preferencias",
+    "tabs": {
+      "profile": "Perfil",
+      "notifications": "Notificaciones",
+      "preferences": "Preferencias",
+      "billing": "Facturación",
+      "d2lIntegration": "Integración D2L",
+      "assignmentMaster": "Base de Datos de Tareas"
+    },
+    "profile": {
+      "title": "Información del Perfil",
+      "fullName": "Nombre Completo",
+      "emailAddress": "Dirección de Correo",
+      "userId": "ID de Usuario",
+      "notProvided": "No proporcionado",
+      "accountManagement": "Gestión de Cuenta",
+      "accountManagementDesc": "La información del perfil se gestiona a través de la autenticación de Clerk",
+      "manageAccount": "Gestionar Cuenta"
+    },
+    "notifications": {
+      "title": "Preferencias de Notificaciones",
+      "emailNotifications": "Notificaciones por Correo",
+      "emailNotificationsDesc": "Recibir notificaciones por correo electrónico",
+      "pushNotifications": "Notificaciones Push",
+      "pushNotificationsDesc": "Recibir notificaciones push en el navegador",
+      "projectUpdates": "Actualizaciones del Proyecto",
+      "projectUpdatesDesc": "Ser notificado sobre cambios en el proyecto"
+    },
+    "preferences": {
+      "title": "Preferencias de la Aplicación",
+      "theme": "Tema",
+      "themeDesc": "Elige tu tema preferido",
+      "themeOptions": {
+        "system": "Predeterminado del Sistema",
+        "light": "Claro",
+        "dark": "Oscuro"
+      },
+      "language": "Idioma",
+      "languageDesc": "Selecciona tu idioma preferido",
+      "languageOptions": {
+        "en": "Inglés",
+        "es": "Español",
+        "fr": "Francés",
+        "de": "Alemán"
+      },
+      "unsavedChanges": "Tienes cambios sin guardar",
+      "resetToDefaults": "Restablecer a valores predeterminados"
+    },
+    "billing": {
+      "title": "Facturación y Uso",
+      "currentSubscription": "Suscripción Actual",
+      "planDetails": "Detalles del Plan",
+      "plan": "Plan",
+      "status": "Estado",
+      "actions": "Acciones",
+      "updatePaymentMethod": "Actualizar Método de Pago",
+      "cancelSubscription": "Cancelar Suscripción",
+      "availablePlans": "Planes Disponibles",
+      "billingInformation": "Información de Facturación",
+      "billingInfo": {
+        "autoRenew": "Todas las suscripciones se facturan mensualmente y se renuevan automáticamente",
+        "cancelAnytime": "Puedes cancelar tu suscripción en cualquier momento",
+        "cancellationEffect": "Las cancelaciones surten efecto al final de tu período de facturación actual",
+        "usageReset": "El uso se calcula mensualmente y se restablece en tu fecha de facturación",
+        "pricing": "Todos los precios están en USD y excluyen impuestos aplicables"
+      },
+      "plans": {
+        "free": {
+          "name": "Gratuito",
+          "price": "$0",
+          "period": "/mes",
+          "features": [
+            "Panel de Control Unificado",
+            "Seguimiento básico de tareas",
+            "Integración de calendario",
+            "Almacenamiento de archivos (5GB)",
+            "2 Períodos"
+          ]
+        },
+        "studentPro": {
+          "name": "Estudiante Pro",
+          "price": "$9.99",
+          "period": "/mes",
+          "annualPrice": "o $8.99/mes facturado anualmente",
+          "trialDays": "Prueba gratuita de 14 días",
+          "features": [
+            "Todas las características gratuitas",
+            "Analíticas e información de calificaciones",
+            "Recomendaciones impulsadas por IA",
+            "Almacenamiento de archivos ilimitado",
+            "Períodos ilimitados"
+          ]
+        }
+      },
+      "usage": {
+        "currentPlan": "Plan",
+        "monthlyCost": "Costo Mensual",
+        "aiUsage": "Uso de IA",
+        "storage": "Almacenamiento",
+        "planDetails": "Detalles del Plan",
+        "aiTokensUsed": "Tokens de IA Usados",
+        "storageUsed": "Almacenamiento Usado",
+        "planType": "Tipo de Plan",
+        "free": "Gratuito",
+        "pro": "Pro",
+        "upgradeRecommended": "Actualización Recomendada",
+        "upgradeReason": "Estás acercándote a tus límites de uso. Actualiza a Estudiante Pro para acceso ilimitado.",
+        "upgradeFeatures": [
+          "Uso de IA ilimitado",
+          "Almacenamiento de archivos ilimitado",
+          "Analíticas e información de calificaciones",
+          "Recomendaciones impulsadas por IA"
+        ]
+      }
+    },
+    "d2l": {
+      "title": "Integración D2L Brightspace",
+      "integrationMethods": "Métodos de Integración",
+      "integrationDesc": "Elige cómo conectar tu cuenta de D2L Brightspace:",
+      "apiIntegration": "Integración API D2L (Mejor)",
+      "apiIntegrationDesc": "API oficial de D2L con sincronización en tiempo real",
+      "ssoIntegration": "Integración SSO (Legacy)",
+      "ssoIntegrationDesc": "Usa el sistema de inicio de sesión de tu escuela",
+      "webScraping": "Web Scraping (Alternativa)",
+      "webScrapingDesc": "Cuando OAuth no está disponible",
+      "icsCalendarFeed": "Feed de Calendario ICS (Instantáneo)",
+      "icsCalendarFeedDesc": "Pega la URL de tu feed de calendario D2L para sincronización inmediata",
+      "aiFeatures": "Características Impulsadas por IA",
+      "aiFeaturesList": [
+        "Analizar automáticamente anuncios para tareas ocultas",
+        "Análisis inteligente de contenido de módulos de curso",
+        "Extracción inteligente de fechas de vencimiento del texto",
+        "Clasificación de tipos de tareas"
+      ],
+      "syncFeatures": "Características de Sincronización",
+      "syncFeaturesList": [
+        "Inscripciones y detalles de cursos",
+        "Buzones de entrega de tareas con fechas de vencimiento",
+        "Cuestionarios y exámenes",
+        "Foros de discusión calificados",
+        "Noticias y anuncios",
+        "Eventos de calendario"
+      ]
+    },
+    "assignmentMaster": {
+      "title": "Base de Datos de Tareas Maestras",
+      "universalCollection": "Colección Universal de Tareas",
+      "universalCollectionDesc": "Recopilar automáticamente tareas de múltiples fuentes sin requerir acceso a API:",
+      "manageDatabase": "Gestionar Base de Datos de Tareas Maestras",
+      "manageDatabaseDesc": "Feeds ICS, análisis de correo y consolidación de fuentes",
+      "icsCalendarFeeds": "Feeds de Calendario ICS",
+      "icsCalendarFeedsList": [
+        "Exportar calendario de D2L",
+        "Detección automática de tareas",
+        "Análisis inteligente de fechas de vencimiento",
+        "Vinculación automática de cursos"
+      ],
+      "emailIntegration": "Integración de Correo",
+      "emailIntegrationList": [
+        "Analizar notificaciones de D2L",
+        "Alertas de actualización de calificaciones",
+        "Notificaciones de nuevas tareas",
+        "Análisis de anuncios"
+      ],
+      "conflictResolution": "Resolución Inteligente de Conflictos",
+      "conflictResolutionList": [
+        "Detección automática de duplicados",
+        "Fusión inteligente de datos",
+        "Puntuación de confianza de fuentes",
+        "Interfaz de revisión manual",
+        "Resolución basada en prioridades"
+      ],
+      "noApiAccess": "Funciona Sin Acceso a API",
+      "noApiAccessDesc": "La Base de Datos de Tareas Maestras usa feeds de calendario exportados y notificaciones de correo, por lo que funciona en cualquier institución sin requerir permisos especiales de API."
+    }
+  },
+  "messages": {
+    "settingsSaved": "¡Configuración guardada exitosamente!",
+    "settingsSavedDesc": "Tus preferencias de tema e idioma han sido guardadas.",
+    "subscriptionCanceled": "¡Suscripción cancelada exitosamente!",
+    "subscriptionCanceledDesc": "Retendrás el acceso hasta el final de tu período de facturación.",
+    "subscriptionCreated": "¡Suscripción creada exitosamente!",
+    "subscriptionCreatedDesc": "¡Bienvenido a Estudiante Pro!",
+    "cancelSubscriptionConfirm": "¿Estás seguro de que quieres cancelar tu suscripción? Perderás acceso a características premium al final de tu período de facturación.",
+    "paymentMethodUpdate": "¡Actualización de método de pago próximamente!",
+    "subscriptionFailed": "Error al cancelar la suscripción. Por favor, inténtalo de nuevo.",
+    "subscribeFailed": "Error al suscribirse al plan. Por favor, inténtalo de nuevo."
+  },
+  "ui": {
+    "escToClose": "ESC para cerrar",
+    "saveChanges": "Guardar Cambios",
+    "currentPlan": "Plan Actual",
+    "mostPopular": "Más Popular",
+    "subscribeToStudentPro": "Suscribirse a Estudiante Pro",
+    "chooseYourPlan": "Elige Tu Plan",
+    "selectPlanDesc": "Selecciona el plan que mejor se adapte a tus necesidades académicas"
+  }
+}

@@ -212,3 +212,6 @@ If auto-sync doesn't meet your needs, consider these alternatives:
 
 **🎉 Congratulations!** You now have seamless D2L auto-sync set up. Your assignments and grades will automatically appear in Northstar every time you log into D2L!
 
+
+
+

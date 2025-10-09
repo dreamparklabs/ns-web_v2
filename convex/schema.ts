@@ -5,6 +5,8 @@ export default defineSchema({
   assignments: defineTable({
     courseId: v.id("courses"),
     dueAt: v.optional(v.float64()),
+    dueDate: v.optional(v.string()), // ISO string for email notifications
+    description: v.optional(v.string()), // Assignment description
     pointsEarned: v.optional(v.float64()), // Points received/earned
     maxPoints: v.optional(v.float64()), // Maximum possible points
     grade: v.optional(v.float64()), // Calculated percentage (pointsEarned/maxPoints * 100)
@@ -75,6 +77,7 @@ export default defineSchema({
     courseId: v.optional(v.id("courses")),
     description: v.optional(v.string()),
     endTime: v.float64(),
+    startDate: v.optional(v.string()), // ISO string for email notifications
     lc_title: v.string(),
     location: v.string(),
     startTime: v.float64(),
@@ -148,7 +151,16 @@ export default defineSchema({
     d2lSessionData: v.optional(v.string()),
     d2lLastScrapingAt: v.optional(v.float64()),
     d2lUserEmail: v.optional(v.string()),
-  }),
+    // Email preferences
+    emailPreferences: v.optional(v.object({
+      assignments: v.boolean(),
+      events: v.boolean(),
+      dailyUpdates: v.boolean(),
+      weeklyDigest: v.boolean(),
+      urgentNotifications: v.boolean(),
+    })),
+    primaryEmailAddressId: v.optional(v.string()),
+  }).index("by_clerk_id", ["clerkUserId"]),
   files: defineTable({
     userId: v.id("users"),
     assignmentId: v.optional(v.id("assignments")),
@@ -373,4 +385,97 @@ export default defineSchema({
     lastUpdated: v.float64(),
   }).index("by_user", ["userId"])
     .index("by_profit", ["profitMarginUSD"]),
+
+  // User session tracking with device information
+  userSessions: defineTable({
+    userId: v.id("users"), // Clerk user ID
+    sessionId: v.string(), // Clerk session ID
+
+    // Device information
+    browserName: v.optional(v.string()),
+    browserVersion: v.optional(v.string()),
+    deviceType: v.optional(v.string()),
+    osName: v.optional(v.string()),
+    osVersion: v.optional(v.string()),
+    deviceVendor: v.optional(v.string()),
+    deviceModel: v.optional(v.string()),
+
+    // Location information
+    ipAddress: v.optional(v.string()),
+    city: v.optional(v.string()),
+    country: v.optional(v.string()),
+    region: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    isp: v.optional(v.string()),
+
+    // Technical information
+    screenResolution: v.optional(v.string()),
+    language: v.optional(v.string()),
+    platform: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+
+    // Session metadata
+    customLabel: v.optional(v.string()), // User-defined device label
+    loginAt: v.float64(), // When session was created
+    lastActiveAt: v.float64(), // Last activity timestamp
+    isActive: v.boolean(), // Whether session is still active
+
+    // Timestamps
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  }).index("by_user", ["userId"])
+    .index("by_session", ["sessionId"])
+    .index("by_user_active", ["userId", "isActive"])
+    .index("by_active", ["isActive"]),
+
+  // Recurring/Historical user sessions - stores completed session data
+  recurringUserSessions: defineTable({
+    userId: v.id("users"), // Clerk user ID
+    sessionId: v.string(), // Clerk session ID
+
+    // Device information
+    browserName: v.optional(v.string()),
+    browserVersion: v.optional(v.string()),
+    deviceType: v.optional(v.string()),
+    osName: v.optional(v.string()),
+    osVersion: v.optional(v.string()),
+    deviceVendor: v.optional(v.string()),
+    deviceModel: v.optional(v.string()),
+
+    // Location information
+    ipAddress: v.optional(v.string()),
+    city: v.optional(v.string()),
+    country: v.optional(v.string()),
+    region: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    isp: v.optional(v.string()),
+
+    // Technical information
+    screenResolution: v.optional(v.string()),
+    language: v.optional(v.string()),
+    platform: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+
+    // Session metadata
+    customLabel: v.optional(v.string()), // User-defined device label
+    loginAt: v.float64(), // When session was created
+    logoutAt: v.float64(), // When session ended
+    lastActiveAt: v.float64(), // Last activity timestamp
+    sessionDuration: v.float64(), // Total session duration in milliseconds
+
+    // Session end reason
+    endReason: v.union(
+      v.literal("manual_signout"), // User clicked sign out
+      v.literal("timeout"), // Session timed out
+      v.literal("cleanup"), // Cleaned up by system
+      v.literal("bulk_signout") // Signed out from all devices
+    ),
+
+    // Timestamps
+    createdAt: v.float64(), // When this record was created (same as logoutAt)
+  }).index("by_user", ["userId"])
+    .index("by_session", ["sessionId"])
+    .index("by_user_logout", ["userId", "logoutAt"])
+    .index("by_logout_date", ["logoutAt"])
+    .index("by_end_reason", ["endReason"]),
 });

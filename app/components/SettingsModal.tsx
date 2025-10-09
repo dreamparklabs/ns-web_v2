@@ -4,10 +4,18 @@ import { useUser } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../contexts/ThemeContext";
 import { useNotifications } from "../contexts/NotificationContext";
+import { useLanguage, useTranslation } from "../contexts/LanguageContext";
 import D2LOAuthSettings from "./D2LOAuthSettings";
 import D2LWebScrapingSettings from "./D2LWebScrapingSettings";
 import D2LAPISettings from "./D2LAPISettings";
 import AssignmentMasterSettings from "./AssignmentMasterSettings";
+import ActiveDevices from "./ActiveDevices";
+import PasswordChangeForm from "./PasswordChangeForm";
+import EmailNotificationSettings from "./EmailNotificationSettings";
+// import PushNotificationSettings from "./PushNotificationSettings";
+import { useClerkBilling, usePlanAccess, useFeatureAccess } from "../hooks/useClerkBilling";
+import { PricingTable } from "./ClerkBillingComponents";
+import { UsageDashboard } from "./UsageDashboard";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,18 +25,22 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
-  const { theme, language, setTheme, setLanguage } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { success } = useNotifications();
-  const [activeTab, setActiveTab] = useState<"profile" | "notifications" | "preferences" | "d2l" | "master">("profile");
+  const { language, setLanguage, availableLanguages } = useLanguage();
+  const t = useTranslation();
+
+  // Billing hooks
+  const { cancelSubscription, subscribeToPlan } = useClerkBilling();
+  const { currentPlan, isSubscribed } = usePlanAccess();
+  const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "billing" | "security" | "d2l" | "master">("profile");
   const [isD2LModalOpen, setIsD2LModalOpen] = useState(false);
   const [isD2LWebScrapingModalOpen, setIsD2LWebScrapingModalOpen] = useState(false);
   const [isD2LAPIModalOpen, setIsD2LAPIModalOpen] = useState(false);
   const [isAssignmentMasterModalOpen, setIsAssignmentMasterModalOpen] = useState(false);
 
   // Notification preferences state
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [projectUpdates, setProjectUpdates] = useState(true);
+  // Email notifications now handled by EmailNotificationSettings component
 
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -86,7 +98,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const savePreferences = () => {
     setHasUnsavedChanges(false);
     // Show success notification
-    success('Settings saved successfully!', 'Your theme and language preferences have been saved.');
+    success(t('messages.settingsSaved'), t('messages.settingsSavedDesc'));
   };
 
   // Reset to defaults
@@ -96,17 +108,37 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setHasUnsavedChanges(true);
   };
 
+  // Billing handlers
+  const handleCancelSubscription = async () => {
+    if (window.confirm(t('messages.cancelSubscriptionConfirm'))) {
+      try {
+        await cancelSubscription();
+        success(t('messages.subscriptionCanceled'), t('messages.subscriptionCanceledDesc'));
+      } catch (error) {
+        console.error('Failed to cancel subscription:', error);
+        alert(t('messages.subscriptionFailed'));
+      }
+    }
+  };
+
+  const handleSubscribeToPlan = async (planId: string) => {
+    try {
+      await subscribeToPlan(planId);
+      success(t('messages.subscriptionCreated'), t('messages.subscriptionCreatedDesc'));
+    } catch (error) {
+      console.error('Failed to subscribe to plan:', error);
+      alert(t('messages.subscribeFailed'));
+    }
+  };
+
   const handleSaveSettings = () => {
     // Save all settings
     savePreferences();
 
-    console.log("Saving settings:", {
-      emailNotifications,
-      pushNotifications,
-      projectUpdates,
-      theme,
-      language,
-    });
+      console.log("Saving settings:", {
+        theme,
+        language,
+      });
 
     onClose();
   };
@@ -114,7 +146,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const tabs = [
     {
       id: "profile" as const,
-      name: "Profile",
+      name: t('settings.tabs.profile'),
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -122,17 +154,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       )
     },
     {
-      id: "notifications" as const,
-      name: "Notifications",
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
-    },
-    {
       id: "preferences" as const,
-      name: "Preferences",
+      name: t('settings.tabs.preferences'),
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -141,8 +164,26 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       )
     },
     {
+      id: "billing" as const,
+      name: t('settings.tabs.billing'),
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      )
+    },
+    {
+      id: "security" as const,
+      name: "Security",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      )
+    },
+    {
       id: "d2l" as const,
-      name: "D2L Integration",
+      name: t('settings.tabs.d2lIntegration'),
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -151,7 +192,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     },
     {
       id: "master" as const,
-      name: "Assignment Master",
+      name: t('settings.tabs.assignmentMaster'),
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
@@ -199,8 +240,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Settings</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account and preferences</p>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('settings.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.subtitle')}</p>
               </div>
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded border">
@@ -273,113 +314,52 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         readOnly
                       />
                     </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Account Management</p>
-                          <p className="text-xs text-blue-700 dark:text-blue-300">Profile information is managed through Clerk authentication</p>
-                        </div>
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                          Manage Account
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === "notifications" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notification Preferences</h3>
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive notifications via email</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={emailNotifications}
-                          onChange={(e) => setEmailNotifications(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive push notifications in browser</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={pushNotifications}
-                          onChange={(e) => setPushNotifications(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">Project Updates</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Get notified about project changes</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={projectUpdates}
-                          onChange={(e) => setProjectUpdates(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {activeTab === "preferences" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Preferences</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('settings.preferences.title')}</h3>
                   <div className="space-y-6">
                     <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Theme</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Choose your preferred theme</p>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('settings.preferences.theme')}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{t('settings.preferences.themeDesc')}</p>
                       <select
                         value={theme}
                         onChange={(e) => handleThemeChange(e.target.value as "system" | "light" | "dark")}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                       >
-                        <option value="system">System Default</option>
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
+                        <option value="system">{t('settings.preferences.themeOptions.system')}</option>
+                        <option value="light">{t('settings.preferences.themeOptions.light')}</option>
+                        <option value="dark">{t('settings.preferences.themeOptions.dark')}</option>
                       </select>
                     </div>
 
                     <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Language</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Select your preferred language</p>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('settings.preferences.language')}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{t('settings.preferences.languageDesc')}</p>
                       <select
                         value={language}
                         onChange={(e) => handleLanguageChange(e.target.value as "en" | "es" | "fr" | "de")}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                       >
-                        <option value="en">English</option>
-                        <option value="es">Spanish</option>
-                        <option value="fr">French</option>
-                        <option value="de">German</option>
+                        {availableLanguages.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.nativeName}
+                          </option>
+                        ))}
                       </select>
                     </div>
+
+                    {/* Email Notification Settings */}
+                    <EmailNotificationSettings />
+
+                    {/* Push Notification Settings */}
+                    {/* <PushNotificationSettings /> */}
 
                     {hasUnsavedChanges && (
                       <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
@@ -388,13 +368,13 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
-                            <span className="text-sm font-medium text-amber-800 dark:text-amber-200">You have unsaved changes</span>
+                            <span className="text-sm font-medium text-amber-800 dark:text-amber-200">{t('settings.preferences.unsavedChanges')}</span>
                           </div>
                           <button
                             onClick={resetToDefaults}
                             className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium"
                           >
-                            Reset to defaults
+                            {t('settings.preferences.resetToDefaults')}
                           </button>
                         </div>
                       </div>
@@ -403,6 +383,132 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </div>
               </div>
             )}
+
+            {activeTab === "billing" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Billing & Usage</h3>
+
+                  {/* Current Subscription */}
+                  {isSubscribed && (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
+                          Current Subscription
+                        </h4>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          currentPlan?.status === 'active'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        }`}>
+                          {(currentPlan?.status || 'active').replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            Plan Details
+                          </h5>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Plan:</span>
+                              <span className="font-medium text-gray-900 dark:text-white capitalize">
+                                {currentPlan?.plan || 'free'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                              <span className="font-medium text-gray-900 dark:text-white capitalize">
+                                {currentPlan?.status?.replace('_', ' ') || 'active'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h5 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            Actions
+                          </h5>
+                          <div className="space-y-3">
+                            <button
+                              onClick={() => alert('Payment method update coming soon!')}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                            >
+                              Update Payment Method
+                            </button>
+                            <button
+                              onClick={handleCancelSubscription}
+                              className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                            >
+                              Cancel Subscription
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Usage Dashboard */}
+                  <div className="mb-6">
+                    <UsageDashboard />
+                  </div>
+
+                  {/* Available Plans */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                      Available Plans
+                    </h4>
+                    <PricingTable />
+                  </div>
+
+                  {/* Billing Information */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                      Billing Information
+                    </h4>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                      <p>
+                        • All subscriptions are billed monthly and automatically renew
+                      </p>
+                      <p>
+                        • You can cancel your subscription at any time
+                      </p>
+                      <p>
+                        • Cancellations take effect at the end of your current billing period
+                      </p>
+                      <p>
+                        • Usage is calculated monthly and resets on your billing date
+                      </p>
+                      <p>
+                        • All prices are in USD and exclude applicable taxes
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+    {activeTab === "security" && (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Security Settings</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            Manage your account security, active devices, and login sessions.
+          </p>
+
+          {/* Password Change Section */}
+          <div className="mb-6">
+            <PasswordChangeForm />
+          </div>
+
+          {/* Active Devices Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <ActiveDevices />
+          </div>
+        </div>
+      </div>
+    )}
 
             {activeTab === "d2l" && (
               <div className="space-y-6">
@@ -592,7 +698,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <kbd className="bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1 py-0.5 rounded text-xs font-mono border border-gray-200 dark:border-gray-500">ESC</kbd>
-                to close
+                {t('ui.escToClose').replace('ESC ', '')}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -601,7 +707,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -618,7 +724,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 )}
-                Save Changes
+                {t('ui.saveChanges')}
               </button>
             </div>
           </div>

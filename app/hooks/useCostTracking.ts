@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAnalytics } from "./useAnalytics";
-import { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 /**
  * Hook for tracking costs and revenue with PostHog integration

@@ -9,6 +9,7 @@ import AddClassModal from "./AddClassModal";
 import TermSelectorModal from "./TermSelectorModal";
 import SettingsModal from "./SettingsModal";
 import FileViewerModal from "./FileViewerModal";
+import FileUploadModal from "./FileUploadModal";
 import UserDropdown from "./UserDropdown";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -119,6 +120,7 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
   const isTermSelectorModalOpen = searchParams.has('term-selector');
   const isSettingsModalOpen = searchParams.has('settings');
   const isFileViewerModalOpen = searchParams.has('view-file');
+  const isUploadModalOpen = searchParams.has('upload-file');
   
   // Get assignment ID from URL for editing
   const editAssignmentId = searchParams.get('edit-assignment') as Id<"assignments"> | null;
@@ -221,6 +223,20 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
   const closeSettingsModal = () => {
     const newSearchParams = new URLSearchParams(location.search);
     newSearchParams.delete('settings');
+    const searchString = newSearchParams.toString();
+    navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
+  };
+
+  // Handle opening/closing upload modal via URL search params
+  const openUploadModal = () => {
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.set('upload-file', 'true');
+    navigate(`${location.pathname}?${newSearchParams.toString()}`);
+  };
+
+  const closeUploadModal = () => {
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.delete('upload-file');
     const searchString = newSearchParams.toString();
     navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
   };
@@ -518,15 +534,17 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
                 )}
               </button>
               
-              <Link
-                to={getNavigationUrl("/app/v2/files/upload")}
+              <button
+                onClick={() => {
+                  openUploadModal();
+                  setIsMobileMenuOpen(false);
+                }}
                 className={`
                   flex items-center font-medium rounded-lg transition-colors duration-200 group relative
                   ${isCollapsed ? 'w-8 h-8 justify-center' : 'px-2 py-1.5'}
                   text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white
                 `}
                 style={{ fontSize: '12px' }}
-                onClick={() => setIsMobileMenuOpen(false)}
                 title={isCollapsed ? 'Upload File' : undefined}
               >
                 <span className={`${isCollapsed ? '' : 'mr-2'}`} style={{ fontSize: '12px' }}>
@@ -542,7 +560,7 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
                     Upload File
                   </div>
                 )}
-              </Link>
+              </button>
             </div>
           </nav>
 
@@ -599,6 +617,12 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
         onClose={closeFileViewerModal}
         fileId={viewFileId}
         fileName={undefined}
+      />
+
+      {/* File Upload Modal */}
+      <FileUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={closeUploadModal}
       />
     </>
   );

@@ -12,6 +12,11 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { PostHogProvider } from "./contexts/PostHogContext";
+import { BillingProvider } from "./contexts/BillingContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import * as Sentry from "@sentry/react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -19,6 +24,8 @@ import "./styles/dashboard-modern.css";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+const GTM_ID = import.meta.env.VITE_GTM_ID;
+const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
 if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY.includes('placeholder')) {
   console.warn("⚠️  Clerk keys not configured. Please set up your Clerk keys in .env.local");
@@ -56,11 +63,57 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+
+        {/* Google Tag Manager */}
+        {GTM_ID && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${GTM_ID}');`,
+            }}
+          />
+        )}
+
+        {/* Google Analytics (Direct Implementation) */}
+        {GA_MEASUREMENT_ID && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_MEASUREMENT_ID}');
+                `,
+              }}
+            />
+          </>
+        )}
       </head>
       <body className="bg-white dark:bg-gray-900">
+        {/* Google Tag Manager (noscript) */}
+        {GTM_ID && (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+              height="0"
+              width="0"
+              style={{ display: 'none', visibility: 'hidden' }}
+            />
+          </noscript>
+        )}
+
         {children}
         <ScrollRestoration />
         <Scripts />
+
+        {/* Vercel Analytics */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
@@ -104,9 +157,13 @@ export default function App() {
       <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
         <PostHogProvider>
           <ThemeProvider>
-            <NotificationProvider>
-              <Outlet />
-            </NotificationProvider>
+            <LanguageProvider>
+              <NotificationProvider>
+                <BillingProvider>
+                  <Outlet />
+                </BillingProvider>
+              </NotificationProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </PostHogProvider>
       </ClerkProvider>
@@ -118,9 +175,13 @@ export default function App() {
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <PostHogProvider>
           <ThemeProvider>
-            <NotificationProvider>
-              <Outlet />
-            </NotificationProvider>
+            <LanguageProvider>
+              <NotificationProvider>
+                <BillingProvider>
+                  <Outlet />
+                </BillingProvider>
+              </NotificationProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </PostHogProvider>
       </ConvexProviderWithClerk>
@@ -139,9 +200,17 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       error.status === 404
         ? "The requested page could not be found."
         : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+  } else if (error && error instanceof Error) {
+    // Capture non-404 errors to Sentry
+    // (404s are route errors, not exceptions we want to track)
+    if (!isRouteErrorResponse(error) || error.status !== 404) {
+      Sentry.captureException(error);
+    }
+
+    if (import.meta.env.DEV) {
+      details = error.message;
+      stack = error.stack;
+    }
   }
 
   return (

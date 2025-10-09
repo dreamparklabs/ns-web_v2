@@ -1,0 +1,187 @@
+{
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "loading": "Wird geladen...",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "yes": "Ja",
+    "no": "Nein",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "create": "Erstellen",
+    "update": "Aktualisieren",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "sort": "Sortieren",
+    "refresh": "Aktualisieren",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Vorherige",
+    "submit": "Einreichen",
+    "reset": "Zurücksetzen",
+    "confirm": "Bestätigen",
+    "warning": "Warnung",
+    "info": "Information",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "signup": "Registrieren",
+    "dashboard": "Dashboard",
+    "calendar": "Kalender",
+    "assignments": "Aufgaben",
+    "classes": "Klassen",
+    "grades": "Noten",
+    "files": "Dateien",
+    "analytics": "Analytik",
+    "billing": "Abrechnung"
+  },
+  "navigation": {
+    "mainMenu": "HAUPTMENÜ",
+    "quickActions": "SCHNELLE AKTIONEN",
+    "addTask": "Aufgabe hinzufügen",
+    "addClass": "Klasse hinzufügen",
+    "uploadFile": "Datei hochladen"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Verwalten Sie Ihr Konto und Ihre Einstellungen",
+    "tabs": {
+      "profile": "Profil",
+      "notifications": "Benachrichtigungen",
+      "preferences": "Einstellungen",
+      "billing": "Abrechnung",
+      "d2lIntegration": "D2L-Integration",
+      "assignmentMaster": "Aufgaben-Datenbank"
+    },
+    "profile": {
+      "title": "Profilinformationen",
+      "fullName": "Vollständiger Name",
+      "emailAddress": "E-Mail-Adresse",
+      "userId": "Benutzer-ID",
+      "notProvided": "Nicht angegeben",
+      "accountManagement": "Kontoverwaltung",
+      "accountManagementDesc": "Profilinformationen werden über Clerk-Authentifizierung verwaltet",
+      "manageAccount": "Konto verwalten"
+    },
+    "notifications": {
+      "title": "Benachrichtigungseinstellungen",
+      "emailNotifications": "E-Mail-Benachrichtigungen",
+      "emailNotificationsDesc": "Benachrichtigungen per E-Mail erhalten",
+      "pushNotifications": "Push-Benachrichtigungen",
+      "pushNotificationsDesc": "Push-Benachrichtigungen im Browser erhalten",
+      "projectUpdates": "Projekt-Updates",
+      "projectUpdatesDesc": "Über Projektänderungen benachrichtigt werden"
+    },
+    "preferences": {
+      "title": "Anwendungseinstellungen",
+      "theme": "Design",
+      "themeDesc": "Wählen Sie Ihr bevorzugtes Design",
+      "themeOptions": {
+        "system": "Systemstandard",
+        "light": "Hell",
+        "dark": "Dunkel"
+      },
+      "language": "Sprache",
+      "languageDesc": "Wählen Sie Ihre bevorzugte Sprache",
+      "languageOptions": {
+        "en": "Englisch",
+        "es": "Spanisch",
+        "fr": "Französisch",
+        "de": "Deutsch"
+      },
+      "unsavedChanges": "Sie haben ungespeicherte Änderungen",
+      "resetToDefaults": "Auf Standard zurücksetzen"
+    },
+    "billing": {
+      "title": "Abrechnung und Nutzung",
+      "currentSubscription": "Aktuelles Abonnement",
+      "planDetails": "Plan-Details",
+      "plan": "Plan",
+      "status": "Status",
+      "actions": "Aktionen",
+      "updatePaymentMethod": "Zahlungsmethode aktualisieren",
+      "cancelSubscription": "Abonnement kündigen",
+      "availablePlans": "Verfügbare Pläne",
+      "billingInformation": "Abrechnungsinformationen",
+      "billingInfo": {
+        "autoRenew": "Alle Abonnements werden monatlich abgerechnet und verlängern sich automatisch",
+        "cancelAnytime": "Sie können Ihr Abonnement jederzeit kündigen",
+        "cancellationEffect": "Kündigungen treten am Ende Ihres aktuellen Abrechnungszeitraums in Kraft",
+        "usageReset": "Die Nutzung wird monatlich berechnet und setzt sich an Ihrem Abrechnungsdatum zurück",
+        "pricing": "Alle Preise sind in USD und schließen anfallende Steuern aus"
+      },
+      "plans": {
+        "free": {
+          "name": "Kostenlos",
+          "price": "0€",
+          "period": "/Monat",
+          "features": [
+            "Einheitliches Dashboard",
+            "Grundlegende Aufgabenverfolgung",
+            "Kalender-Integration",
+            "Dateispeicher (5GB)",
+            "2 Semester"
+          ]
+        },
+        "studentPro": {
+          "name": "Student Pro",
+          "price": "9,99€",
+          "period": "/Monat",
+          "annualPrice": "oder 8,99€/Monat jährlich abgerechnet",
+          "trialDays": "14-tägige kostenlose Testversion",
+          "features": [
+            "Alle kostenlosen Funktionen",
+            "Noten-Analytik und Einblicke",
+            "KI-gestützte Empfehlungen",
+            "Unbegrenzter Dateispeicher",
+            "Unbegrenzte Semester"
+          ]
+        }
+      },
+      "usage": {
+        "currentPlan": "Plan",
+        "monthlyCost": "Monatliche Kosten",
+        "aiUsage": "KI-Nutzung",
+        "storage": "Speicher",
+        "planDetails": "Plan-Details",
+        "aiTokensUsed": "KI-Tokens verwendet",
+        "storageUsed": "Speicher verwendet",
+        "planType": "Plan-Typ",
+        "free": "Kostenlos",
+        "pro": "Pro",
+        "upgradeRecommended": "Upgrade empfohlen",
+        "upgradeReason": "Sie nähern sich Ihren Nutzungsgrenzen. Upgraden Sie auf Student Pro für unbegrenzten Zugang.",
+        "upgradeFeatures": [
+          "Unbegrenzte KI-Nutzung",
+          "Unbegrenzter Dateispeicher",
+          "Noten-Analytik und Einblicke",
+          "KI-gestützte Empfehlungen"
+        ]
+      }
+    }
+  },
+  "messages": {
+    "settingsSaved": "Einstellungen erfolgreich gespeichert!",
+    "settingsSavedDesc": "Ihre Design- und Spracheinstellungen wurden gespeichert.",
+    "subscriptionCanceled": "Abonnement erfolgreich gekündigt!",
+    "subscriptionCanceledDesc": "Sie behalten den Zugang bis zum Ende Ihres Abrechnungszeitraums.",
+    "subscriptionCreated": "Abonnement erfolgreich erstellt!",
+    "subscriptionCreatedDesc": "Willkommen bei Student Pro!",
+    "cancelSubscriptionConfirm": "Sind Sie sicher, dass Sie Ihr Abonnement kündigen möchten? Sie verlieren den Zugang zu Premium-Funktionen am Ende Ihres Abrechnungszeitraums.",
+    "paymentMethodUpdate": "Zahlungsmethoden-Update kommt bald!",
+    "subscriptionFailed": "Fehler beim Kündigen des Abonnements. Bitte versuchen Sie es erneut.",
+    "subscribeFailed": "Fehler beim Abonnieren des Plans. Bitte versuchen Sie es erneut."
+  },
+  "ui": {
+    "escToClose": "ESC zum Schließen",
+    "saveChanges": "Änderungen speichern",
+    "currentPlan": "Aktueller Plan",
+    "mostPopular": "Am beliebtesten",
+    "subscribeToStudentPro": "Student Pro abonnieren",
+    "chooseYourPlan": "Wählen Sie Ihren Plan",
+    "selectPlanDesc": "Wählen Sie den Plan, der am besten zu Ihren akademischen Bedürfnissen passt"
+  }
+}

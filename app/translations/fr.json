@@ -1,0 +1,187 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "yes": "Oui",
+    "no": "Non",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "refresh": "Actualiser",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "submit": "Soumettre",
+    "reset": "Réinitialiser",
+    "confirm": "Confirmer",
+    "warning": "Avertissement",
+    "info": "Information",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "signup": "S'inscrire",
+    "dashboard": "Tableau de bord",
+    "calendar": "Calendrier",
+    "assignments": "Devoirs",
+    "classes": "Cours",
+    "grades": "Notes",
+    "files": "Fichiers",
+    "analytics": "Analytiques",
+    "billing": "Facturation"
+  },
+  "navigation": {
+    "mainMenu": "MENU PRINCIPAL",
+    "quickActions": "ACTIONS RAPIDES",
+    "addTask": "Ajouter une tâche",
+    "addClass": "Ajouter un cours",
+    "uploadFile": "Télécharger un fichier"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Gérez votre compte et préférences",
+    "tabs": {
+      "profile": "Profil",
+      "notifications": "Notifications",
+      "preferences": "Préférences",
+      "billing": "Facturation",
+      "d2lIntegration": "Intégration D2L",
+      "assignmentMaster": "Base de données des devoirs"
+    },
+    "profile": {
+      "title": "Informations du profil",
+      "fullName": "Nom complet",
+      "emailAddress": "Adresse e-mail",
+      "userId": "ID utilisateur",
+      "notProvided": "Non fourni",
+      "accountManagement": "Gestion du compte",
+      "accountManagementDesc": "Les informations du profil sont gérées via l'authentification Clerk",
+      "manageAccount": "Gérer le compte"
+    },
+    "notifications": {
+      "title": "Préférences de notification",
+      "emailNotifications": "Notifications par e-mail",
+      "emailNotificationsDesc": "Recevoir des notifications par e-mail",
+      "pushNotifications": "Notifications push",
+      "pushNotificationsDesc": "Recevoir des notifications push dans le navigateur",
+      "projectUpdates": "Mises à jour du projet",
+      "projectUpdatesDesc": "Être notifié des changements du projet"
+    },
+    "preferences": {
+      "title": "Préférences de l'application",
+      "theme": "Thème",
+      "themeDesc": "Choisissez votre thème préféré",
+      "themeOptions": {
+        "system": "Par défaut du système",
+        "light": "Clair",
+        "dark": "Sombre"
+      },
+      "language": "Langue",
+      "languageDesc": "Sélectionnez votre langue préférée",
+      "languageOptions": {
+        "en": "Anglais",
+        "es": "Espagnol",
+        "fr": "Français",
+        "de": "Allemand"
+      },
+      "unsavedChanges": "Vous avez des modifications non sauvegardées",
+      "resetToDefaults": "Réinitialiser aux valeurs par défaut"
+    },
+    "billing": {
+      "title": "Facturation et utilisation",
+      "currentSubscription": "Abonnement actuel",
+      "planDetails": "Détails du plan",
+      "plan": "Plan",
+      "status": "Statut",
+      "actions": "Actions",
+      "updatePaymentMethod": "Mettre à jour le mode de paiement",
+      "cancelSubscription": "Annuler l'abonnement",
+      "availablePlans": "Plans disponibles",
+      "billingInformation": "Informations de facturation",
+      "billingInfo": {
+        "autoRenew": "Tous les abonnements sont facturés mensuellement et se renouvellent automatiquement",
+        "cancelAnytime": "Vous pouvez annuler votre abonnement à tout moment",
+        "cancellationEffect": "Les annulations prennent effet à la fin de votre période de facturation actuelle",
+        "usageReset": "L'utilisation est calculée mensuellement et se remet à zéro à votre date de facturation",
+        "pricing": "Tous les prix sont en USD et excluent les taxes applicables"
+      },
+      "plans": {
+        "free": {
+          "name": "Gratuit",
+          "price": "0$",
+          "period": "/mois",
+          "features": [
+            "Tableau de bord unifié",
+            "Suivi basique des devoirs",
+            "Intégration calendrier",
+            "Stockage de fichiers (5GB)",
+            "2 Périodes"
+          ]
+        },
+        "studentPro": {
+          "name": "Étudiant Pro",
+          "price": "9,99$",
+          "period": "/mois",
+          "annualPrice": "ou 8,99$/mois facturé annuellement",
+          "trialDays": "Essai gratuit de 14 jours",
+          "features": [
+            "Toutes les fonctionnalités gratuites",
+            "Analytiques et insights des notes",
+            "Recommandations alimentées par l'IA",
+            "Stockage de fichiers illimité",
+            "Périodes illimitées"
+          ]
+        }
+      },
+      "usage": {
+        "currentPlan": "Plan",
+        "monthlyCost": "Coût mensuel",
+        "aiUsage": "Utilisation IA",
+        "storage": "Stockage",
+        "planDetails": "Détails du plan",
+        "aiTokensUsed": "Tokens IA utilisés",
+        "storageUsed": "Stockage utilisé",
+        "planType": "Type de plan",
+        "free": "Gratuit",
+        "pro": "Pro",
+        "upgradeRecommended": "Mise à niveau recommandée",
+        "upgradeReason": "Vous approchez de vos limites d'utilisation. Passez à Étudiant Pro pour un accès illimité.",
+        "upgradeFeatures": [
+          "Utilisation IA illimitée",
+          "Stockage de fichiers illimité",
+          "Analytiques et insights des notes",
+          "Recommandations alimentées par l'IA"
+        ]
+      }
+    }
+  },
+  "messages": {
+    "settingsSaved": "Paramètres sauvegardés avec succès !",
+    "settingsSavedDesc": "Vos préférences de thème et de langue ont été sauvegardées.",
+    "subscriptionCanceled": "Abonnement annulé avec succès !",
+    "subscriptionCanceledDesc": "Vous conserverez l'accès jusqu'à la fin de votre période de facturation.",
+    "subscriptionCreated": "Abonnement créé avec succès !",
+    "subscriptionCreatedDesc": "Bienvenue chez Étudiant Pro !",
+    "cancelSubscriptionConfirm": "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous perdrez l'accès aux fonctionnalités premium à la fin de votre période de facturation.",
+    "paymentMethodUpdate": "Mise à jour du mode de paiement bientôt disponible !",
+    "subscriptionFailed": "Échec de l'annulation de l'abonnement. Veuillez réessayer.",
+    "subscribeFailed": "Échec de l'abonnement au plan. Veuillez réessayer."
+  },
+  "ui": {
+    "escToClose": "ESC pour fermer",
+    "saveChanges": "Enregistrer les modifications",
+    "currentPlan": "Plan actuel",
+    "mostPopular": "Le plus populaire",
+    "subscribeToStudentPro": "S'abonner à Étudiant Pro",
+    "chooseYourPlan": "Choisissez votre plan",
+    "selectPlanDesc": "Sélectionnez le plan qui correspond le mieux à vos besoins académiques"
+  }
+}

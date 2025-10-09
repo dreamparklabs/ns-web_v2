@@ -7,6 +7,7 @@ import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import FileUpload from "../components/FileUpload";
+import FileUploadModal from "../components/FileUploadModal";
 import FileViewerModal from "../components/FileViewerModal";
 import ShareModal from "../components/ShareModal";
 
@@ -572,37 +573,15 @@ export default function Files() {
         </div>
       </div>
 
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowUploadModal(false)} />
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Upload Files</h2>
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="p-6 flex-1 overflow-y-auto">
-              <FileUpload
-                onFileUploaded={() => {
-                  console.log("File uploaded successfully");
-                  // The query will automatically refetch
-                }}
-                maxFiles={10}
-                maxSize={100 * 1024 * 1024} // 100MB
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* File Upload Modal */}
+      <FileUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onFileUploaded={() => {
+          console.log("File uploaded successfully");
+          // The query will automatically refetch
+        }}
+      />
 
       {/* File Viewer Modal */}
       <FileViewerModal

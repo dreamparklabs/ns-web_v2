@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/clerk-react";
+import { useSignIn, useClerk } from "@clerk/clerk-react";
 import { useSearchParams, useNavigate } from "react-router";
 import { useState } from "react";
 import type { Route } from "./+types/sign-in";
@@ -12,6 +12,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function SignInPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { signOut } = useClerk();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const extensionCallback = searchParams.get('extension_callback') === 'true';
@@ -28,12 +29,30 @@ export default function SignInPage() {
     ? "/extension-auth-callback"
     : "/app/v2/dashboard";
 
+  const handleClearSession = async () => {
+    try {
+      // Sign out completely to clear any existing sessions
+      await signOut();
+      setError('');
+      console.log('Session cleared');
+    } catch (err) {
+      console.log('No session to clear');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLoaded) return;
 
     setIsLoading(true);
     setError('');
+
+    // Clear any existing sessions first
+    try {
+      await signOut();
+    } catch (err) {
+      console.log('No existing session to clear');
+    }
 
     try {
       const result = await signIn.create({
@@ -128,10 +147,28 @@ export default function SignInPage() {
               <p style={{
                 color: 'var(--color-danger)',
                 fontSize: 'var(--text-sm)',
-                margin: '0'
+                margin: '0 0 var(--space-2) 0'
               }}>
                 {error}
               </p>
+              {error.includes('Session already exists') && (
+                <button
+                  type="button"
+                  onClick={handleClearSession}
+                  style={{
+                    padding: 'var(--space-2) var(--space-3)',
+                    background: 'var(--color-danger)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 'var(--text-xs)',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  Clear Session & Try Again
+                </button>
+              )}
             </div>
           )}
 

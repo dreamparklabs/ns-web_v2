@@ -1,5 +1,6 @@
 import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
+import { callGeminiWithTracking } from "./geminiWithPostHog";
 
 // AI-powered content parser for D2L announcements and modules
 export const parseD2LContentForAssignments = mutation({
@@ -872,12 +873,11 @@ Return comprehensive JSON array:
 Extract EVERYTHING - assignments, discussions, grades, quizzes. Return empty array [] only if truly nothing found.`;
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Use PostHog-tracked Gemini client
+    const result = await callGeminiWithTracking(
+      apiKey,
+      {
+        model: 'gemini-1.5-flash-latest',
         contents: [{
           parts: [{
             text: prompt
@@ -889,32 +889,14 @@ Extract EVERYTHING - assignments, discussions, grades, quizzes. Return empty arr
           topP: 1,
           maxOutputTokens: 2048,
         },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH", 
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+      },
+      {
+        properties: {
+          contentType,
+          use_case: 'd2l_assignment_parsing',
+        },
+      }
+    );
     const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!generatedText) {

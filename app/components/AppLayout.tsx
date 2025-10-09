@@ -3,7 +3,9 @@ import React, { useEffect, memo } from "react";
 import Sidebar from "./Sidebar";
 import RouteTransition from "./RouteTransition";
 import { useUserSetup } from "../hooks/useUserSetup";
+import { useSessionTracking } from "../hooks/useSessionTracking";
 import { PostHogPageView } from "./PostHogPageView";
+import CannyWidget from "./CannyWidget";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -39,6 +41,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { needsOnboarding, isUserReady, isCreatingUser, convexUser, user, isLoaded, userCreationFailed } = useUserSetup();
+
+  // Initialize session tracking
+  useSessionTracking();
 
   // Debug logging (reduced)
   if (!isLoaded || isCreatingUser) {
@@ -116,6 +121,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* PostHog Analytics - Track page views */}
       <PostHogPageView />
+
+      {/* Canny Feedback Widget */}
+      <CannyWidget />
 
       {/* Memoized Sidebar */}
       <SidebarWrapper />

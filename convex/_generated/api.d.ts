@@ -23,10 +23,12 @@ import type * as d2l from "../d2l.js";
 import type * as d2lAPI from "../d2lAPI.js";
 import type * as d2lOAuth from "../d2lOAuth.js";
 import type * as d2lScraper from "../d2lScraper.js";
+import type * as emailNotifications from "../emailNotifications.js";
 import type * as emailParser from "../emailParser.js";
 import type * as ethnicities from "../ethnicities.js";
 import type * as events from "../events.js";
 import type * as files from "../files.js";
+import type * as geminiWithPostHog from "../geminiWithPostHog.js";
 import type * as grades from "../grades.js";
 import type * as icsParser from "../icsParser.js";
 import type * as ltiIntegration from "../ltiIntegration.js";
@@ -36,6 +38,7 @@ import type * as schools from "../schools.js";
 import type * as seed from "../seed.js";
 import type * as terms from "../terms.js";
 import type * as userCosts from "../userCosts.js";
+import type * as userSessions from "../userSessions.js";
 import type * as users from "../users.js";
 
 /**
@@ -57,10 +60,12 @@ declare const fullApi: ApiFromModules<{
   d2lAPI: typeof d2lAPI;
   d2lOAuth: typeof d2lOAuth;
   d2lScraper: typeof d2lScraper;
+  emailNotifications: typeof emailNotifications;
   emailParser: typeof emailParser;
   ethnicities: typeof ethnicities;
   events: typeof events;
   files: typeof files;
+  geminiWithPostHog: typeof geminiWithPostHog;
   grades: typeof grades;
   icsParser: typeof icsParser;
   ltiIntegration: typeof ltiIntegration;
@@ -70,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   terms: typeof terms;
   userCosts: typeof userCosts;
+  userSessions: typeof userSessions;
   users: typeof users;
 }>;
 export declare const api: FilterApi<
