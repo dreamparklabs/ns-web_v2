@@ -3,6 +3,12 @@ import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
 
+// Debug environment variables in production
+console.log('🔍 Environment Debug in entry.client.tsx:');
+console.log('  - VITE_PUBLIC_POSTHOG_KEY present?', !!import.meta.env.VITE_PUBLIC_POSTHOG_KEY);
+console.log('  - VITE_PUBLIC_POSTHOG_KEY value:', import.meta.env.VITE_PUBLIC_POSTHOG_KEY ? import.meta.env.VITE_PUBLIC_POSTHOG_KEY.substring(0, 10) + '...' : 'undefined');
+console.log('  - All VITE env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+
 // Initialize Sentry for client-side error tracking
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || "https://2aa77dfb0c728fb2f3234f3b74e79bb5@o4510134148202496.ingest.us.sentry.io/4510134150496256",

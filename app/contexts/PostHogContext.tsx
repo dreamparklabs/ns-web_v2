@@ -16,6 +16,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const POSTHOG_KEY = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
     const POSTHOG_HOST = import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
+    // Enhanced debugging for production
+    console.log('🔍 PostHog Debug Info:');
+    console.log('  - POSTHOG_KEY present?', !!POSTHOG_KEY);
+    console.log('  - POSTHOG_KEY value:', POSTHOG_KEY ? POSTHOG_KEY.substring(0, 10) + '...' : 'undefined');
+    console.log('  - POSTHOG_HOST:', POSTHOG_HOST);
+    console.log('  - In browser?', typeof window !== "undefined");
+    console.log('  - All env vars:', Object.keys(import.meta.env).filter(key => key.includes('POSTHOG')));
+
     if (POSTHOG_KEY && typeof window !== "undefined") {
       console.log('🔍 PostHog: Initializing with key:', POSTHOG_KEY.substring(0, 10) + '...');
       console.log('🔍 PostHog: Host:', POSTHOG_HOST);
