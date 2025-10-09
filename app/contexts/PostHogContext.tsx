@@ -13,7 +13,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initialize PostHog
-    const POSTHOG_KEY = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
+    const POSTHOG_KEY = import.meta.env.VITE_PUBLIC_POSTHOG_KEY || "phc_r1FtDyJHLLcHCBxtxlekB7203jPd1ZGxoc2FBBGJ3";
     const POSTHOG_HOST = import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
     // Enhanced debugging for production
@@ -23,6 +23,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     console.log('  - POSTHOG_HOST:', POSTHOG_HOST);
     console.log('  - In browser?', typeof window !== "undefined");
     console.log('  - All env vars:', Object.keys(import.meta.env).filter(key => key.includes('POSTHOG')));
+    console.log('  - Using fallback key?', !import.meta.env.VITE_PUBLIC_POSTHOG_KEY);
 
     if (POSTHOG_KEY && typeof window !== "undefined") {
       console.log('🔍 PostHog: Initializing with key:', POSTHOG_KEY.substring(0, 10) + '...');

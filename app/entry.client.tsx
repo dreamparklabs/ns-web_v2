@@ -8,6 +8,7 @@ console.log('🔍 Environment Debug in entry.client.tsx:');
 console.log('  - VITE_PUBLIC_POSTHOG_KEY present?', !!import.meta.env.VITE_PUBLIC_POSTHOG_KEY);
 console.log('  - VITE_PUBLIC_POSTHOG_KEY value:', import.meta.env.VITE_PUBLIC_POSTHOG_KEY ? import.meta.env.VITE_PUBLIC_POSTHOG_KEY.substring(0, 10) + '...' : 'undefined');
 console.log('  - All VITE env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+console.log('  - Will use fallback key:', !import.meta.env.VITE_PUBLIC_POSTHOG_KEY);
 
 // Initialize Sentry for client-side error tracking
 Sentry.init({
