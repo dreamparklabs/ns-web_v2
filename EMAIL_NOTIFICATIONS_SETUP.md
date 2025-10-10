@@ -264,3 +264,4 @@ npx convex logs
 This email notification system provides a comprehensive solution for keeping users informed about their academic activities while respecting their preferences and privacy.
 
 
+

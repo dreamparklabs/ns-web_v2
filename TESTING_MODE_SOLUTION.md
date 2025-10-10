@@ -88,3 +88,4 @@ The email notification system is now fully functional in testing mode. Users can
 **Next Steps**: When ready for production, verify a custom domain in Resend to enable sending emails to any recipient.
 
 
+

@@ -432,3 +432,4 @@ async function extractDataFromAllCourses() {
 
 
 
+
