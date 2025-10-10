@@ -18,12 +18,9 @@ Sentry.init({
   tracesSampleRate: 1.0, // Capture 100% of transactions (adjust for production)
   
   // Set `tracePropagationTargets` to declare which URL(s) should have trace propagation enabled
-  // Exclude Clerk domains to prevent CORS issues with sentry-trace header
+  // Only enable for same-origin requests to avoid CORS issues with external services like Clerk
   tracePropagationTargets: [
-    /^\//,
-    /^https:\/\/.*\.vercel\.app/,
-    // Only include dplapp.com domains that are NOT clerk domains
-    /^https:\/\/(?!.*clerk).*\.dplapp\.com/
+    /^\// // Only same-origin requests to avoid CORS conflicts
   ],
 
   // Environment
