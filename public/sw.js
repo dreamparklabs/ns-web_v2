@@ -208,3 +208,4 @@ function getVAPIDPublicKey() {
   return 'YOUR_VAPID_PUBLIC_KEY_HERE';
 }
 
+
