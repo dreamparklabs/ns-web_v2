@@ -17,14 +17,19 @@ Sentry.init({
   // Performance Monitoring
   tracesSampleRate: 1.0, // Capture 100% of transactions (adjust for production)
   
+  // Set `tracePropagationTargets` to declare which URL(s) should have trace propagation enabled
+  // Exclude Clerk domains to prevent CORS issues with sentry-trace header
+  tracePropagationTargets: [
+    /^\//,
+    /^https:\/\/.*\.vercel\.app/,
+    // Only include dplapp.com domains that are NOT clerk domains
+    /^https:\/\/(?!.*clerk).*\.dplapp\.com/
+  ],
+
   // Environment
   environment: process.env.NODE_ENV || 'development',
-  
+
   // Release tracking (optional)
   // release: process.env.VERCEL_GIT_COMMIT_SHA,
 });
-
-
-
-
 
