@@ -74,7 +74,7 @@ export default function SchoolInfoStep({ onNext, onBack, initialData, isLoading 
   const isValid = school && majorCategory && major && currentYear;
 
   return (
-    <div>
+    <div className="pt-2">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           School & Academic Information

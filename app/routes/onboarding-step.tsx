@@ -289,7 +289,7 @@ export default function OnboardingStepPage() {
   }
 
   return (
-    <div className="min-h-screen h-screen bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 flex flex-col lg:flex-row">
+    <div className="min-h-screen h-screen bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 flex flex-col lg:flex-row pt-4 lg:pt-0">
       {/* Left Side - Header & Progress */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 py-8 lg:px-12 lg:py-0">
         <div className="space-y-6 lg:space-y-8">
@@ -369,8 +369,8 @@ export default function OnboardingStepPage() {
       </div>
 
       {/* Right Side - Form Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 overflow-y-auto">
-        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 lg:p-8 pt-8">
+      <div className="w-full lg:w-1/2 flex items-start justify-center p-6 lg:p-12 overflow-y-auto pt-8 lg:pt-12">
+        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 lg:p-8">
           {/* Step content */}
           {currentStep === 1 && (
             <DemographicsStep
