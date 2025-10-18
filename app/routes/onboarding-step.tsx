@@ -7,7 +7,7 @@ import DemographicsStep from "../components/onboarding/DemographicsStep";
 import SchoolInfoStep from "../components/onboarding/SchoolInfoStep";
 import TermSetupStep from "../components/onboarding/TermSetupStep";
 import PlanSelectionStep from "../components/onboarding/PlanSelectionStep";
-import type { Route } from "./+types/onboarding.step.$step";
+import type { Route } from "./+types/onboarding-step";
 
 export function meta({}: Route.MetaArgs) {
   return [
