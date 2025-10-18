@@ -36,6 +36,7 @@ import type * as majorCategories from "../majorCategories.js";
 import type * as onboarding from "../onboarding.js";
 import type * as schools from "../schools.js";
 import type * as seed from "../seed.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as terms from "../terms.js";
 import type * as userCosts from "../userCosts.js";
 import type * as userSessions from "../userSessions.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   onboarding: typeof onboarding;
   schools: typeof schools;
   seed: typeof seed;
+  subscriptions: typeof subscriptions;
   terms: typeof terms;
   userCosts: typeof userCosts;
   userSessions: typeof userSessions;

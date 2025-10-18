@@ -6,6 +6,7 @@ import { useUserSetup } from "../hooks/useUserSetup";
 import { useSessionTracking } from "../hooks/useSessionTracking";
 import { PostHogPageView } from "./PostHogPageView";
 import CannyWidget from "./CannyWidget";
+import { SubscriptionSync } from "./SubscriptionSync";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -121,6 +122,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* PostHog Analytics - Track page views */}
       <PostHogPageView />
+
+      {/* Subscription Sync - Automatically sync subscription from Clerk to Convex */}
+      <SubscriptionSync />
 
       {/* Canny Feedback Widget */}
       <CannyWidget />

@@ -10,12 +10,18 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.48.1",
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/nextjs": "^6.33.2",
+    "@clerk/react-router": "^2.1.1",
     "@posthog/ai": "^6.4.3",
     "@react-router/node": "^7.7.1",
     "@react-router/serve": "^7.7.1",
     "@sentry/react": "^10.17.0",
     "@sentry/react-router": "^10.17.0",
+    "@statsig/js-client": "^3.26.0",
+    "@statsig/react-bindings": "^3.26.0",
+    "@statsig/session-replay": "^3.26.0",
+    "@statsig/web-analytics": "^3.26.0",
     "@types/pdfjs-dist": "^2.10.377",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
@@ -32,6 +38,8 @@
     "react-dom": "^19.1.0",
     "react-router": "^7.7.1",
     "resend": "^6.1.2",
+    "stripe": "^19.1.0",
+    "svix": "^1.77.0",
     "tesseract.js": "^6.0.1"
   },
   "devDependencies": {

@@ -13,9 +13,9 @@ import ActiveDevices from "./ActiveDevices";
 import PasswordChangeForm from "./PasswordChangeForm";
 import EmailNotificationSettings from "./EmailNotificationSettings";
 // import PushNotificationSettings from "./PushNotificationSettings";
-import { useClerkBilling, usePlanAccess, useFeatureAccess } from "../hooks/useClerkBilling";
-import { PricingTable } from "./ClerkBillingComponents";
-import { UsageDashboard } from "./UsageDashboard";
+import { useAuth } from '@clerk/clerk-react';
+import { UsageStats } from "./UsageStats";
+import { useClerkBilling } from "../hooks/useClerkBilling";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -29,15 +29,21 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { success } = useNotifications();
   const { language, setLanguage, availableLanguages } = useLanguage();
   const t = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Billing hooks
-  const { cancelSubscription, subscribeToPlan } = useClerkBilling();
-  const { currentPlan, isSubscribed } = usePlanAccess();
+  const { has } = useAuth();
+  const { subscribeToPlan, syncSubscription, getCurrentPlan, isLoading: isBillingLoading } = useClerkBilling();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "billing" | "security" | "d2l" | "master">("profile");
   const [isD2LModalOpen, setIsD2LModalOpen] = useState(false);
   const [isD2LWebScrapingModalOpen, setIsD2LWebScrapingModalOpen] = useState(false);
   const [isD2LAPIModalOpen, setIsD2LAPIModalOpen] = useState(false);
   const [isAssignmentMasterModalOpen, setIsAssignmentMasterModalOpen] = useState(false);
+  const [isCheckoutActive, setIsCheckoutActive] = useState(false);
+  const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
+  const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
 
   // Notification preferences state
   // Email notifications now handled by EmailNotificationSettings component
@@ -45,19 +51,67 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Reset unsaved changes when modal opens
+  // Function to handle tab changes and update URL
+  const handleTabChange = (newTab: "profile" | "preferences" | "billing" | "security" | "d2l" | "master") => {
+    setActiveTab(newTab);
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.set('tab', newTab);
+    navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+  };
+
+  // Reset unsaved changes and set tab when modal opens
   useEffect(() => {
     if (isOpen) {
       setHasUnsavedChanges(false);
-    }
-  }, [isOpen]);
 
-  // Handle keyboard shortcuts
+      // Set active tab from URL parameter
+      const tabParam = searchParams.get('tab') as "profile" | "preferences" | "billing" | "security" | "d2l" | "master";
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+
+      // Check for downgrade modal parameter
+      const downgradeParam = searchParams.get('downgrade');
+      if (downgradeParam === 'true') {
+        // Only show if user is on Pro plan
+        const planInfo = getCurrentPlan();
+        if (planInfo?.plan === 'northstar_pro') {
+          setPendingDowngradePlan('northstar_basic');
+          setShowDowngradeWarning(true);
+        }
+      }
+    }
+  }, [isOpen, searchParams, getCurrentPlan]);
+
+  // Sync subscription when returning from successful checkout
+  useEffect(() => {
+    const checkoutStatus = searchParams.get('checkout');
+    if (checkoutStatus === 'success' && isOpen) {
+      console.log('🎉 Checkout successful! Syncing subscription...');
+      syncSubscription().then(() => {
+        success('Subscription activated successfully!');
+        // Force a re-render by reloading user data
+        if (user) {
+          user.reload().then(() => {
+            console.log('✅ User reloaded after sync');
+          });
+        }
+      }).catch((error) => {
+        console.error('Failed to sync subscription:', error);
+      });
+    }
+  }, [searchParams, isOpen, syncSubscription, success, user]);
+
+  // Handle keyboard shortcuts (but not when checkout is active or downgrade modal is showing)
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // Don't close if checkout is active or downgrade modal is showing
+        if (isCheckoutActive || showDowngradeWarning) {
+          return;
+        }
         e.preventDefault();
         onClose();
       }
@@ -65,11 +119,50 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isCheckoutActive, showDowngradeWarning]);
 
-  // Handle click outside
+  // Handle ESC key for downgrade warning modal
+  useEffect(() => {
+    if (!showDowngradeWarning) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelDowngrade();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showDowngradeWarning]);
+
+  // Detect active Clerk/Stripe checkout
+  useEffect(() => {
+    const checkForActiveCheckout = () => {
+      // Check for Clerk/Stripe iframes that indicate an active checkout
+      const stripeIframes = document.querySelectorAll('iframe[src*="stripe.com"], iframe[src*="clerk"]');
+      const hasActiveCheckout = stripeIframes.length > 0;
+      setIsCheckoutActive(hasActiveCheckout);
+    };
+
+    if (isOpen) {
+      // Check initially
+      checkForActiveCheckout();
+
+      // Check periodically while modal is open
+      const interval = setInterval(checkForActiveCheckout, 500);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen]);
+
+  // Handle click outside (but not when checkout is active or downgrade modal is showing)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // Don't close if checkout is active or downgrade modal is showing
+      if (isCheckoutActive || showDowngradeWarning) {
+        return;
+      }
+
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -80,7 +173,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isCheckoutActive, showDowngradeWarning]);
 
   // Handle theme change
   const handleThemeChange = (newTheme: "system" | "light" | "dark") => {
@@ -93,6 +186,85 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setLanguage(newLanguage);
     setHasUnsavedChanges(true);
   };
+
+  // Handle subscription - this will redirect to Clerk's checkout page
+  const handleSubscribe = async (planId: string) => {
+    // Check if this is a downgrade from Pro to Basic
+    const planInfo = getCurrentPlan();
+    const currentPlanId = planInfo?.plan;
+
+    if (currentPlanId === 'northstar_pro' && planId === 'northstar_basic') {
+      // Show downgrade warning and update URL
+      setPendingDowngradePlan(planId);
+      setShowDowngradeWarning(true);
+
+      const newSearchParams = new URLSearchParams(location.search);
+      newSearchParams.set('downgrade', 'true');
+      navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+      return;
+    }
+
+    try {
+      await subscribeToPlan(planId);
+      // User will be redirected to Clerk's checkout page, so this won't execute
+      // unless there's an error
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('Failed to start checkout. Please try again.');
+    }
+  };
+
+  // Confirm downgrade after warning
+  const confirmDowngrade = async () => {
+    if (!pendingDowngradePlan) return;
+
+    setShowDowngradeWarning(false);
+
+    // Remove downgrade param from URL
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.delete('downgrade');
+    navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+
+    try {
+      await subscribeToPlan(pendingDowngradePlan);
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setPendingDowngradePlan(null);
+    }
+  };
+
+  // Cancel downgrade
+  const cancelDowngrade = () => {
+    setShowDowngradeWarning(false);
+    setPendingDowngradePlan(null);
+
+    // Remove downgrade param from URL
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.delete('downgrade');
+    navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+  };
+
+  // Check for checkout completion on page load
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutStatus = urlParams.get('checkout');
+
+    if (checkoutStatus === 'success') {
+      success('Subscription successful! Your plan has been updated.');
+      // Clean up URL
+      const newUrl = window.location.pathname + '?settings=true&tab=billing';
+      window.history.replaceState({}, '', newUrl);
+    } else if (checkoutStatus === 'cancelled') {
+      alert('Checkout was cancelled. You can try again whenever you\'re ready.');
+      // Clean up URL
+      const newUrl = window.location.pathname + '?settings=true&tab=billing';
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [isOpen, success]);
 
   // Save preferences
   const savePreferences = () => {
@@ -108,28 +280,19 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setHasUnsavedChanges(true);
   };
 
-  // Billing handlers
-  const handleCancelSubscription = async () => {
-    if (window.confirm(t('messages.cancelSubscriptionConfirm'))) {
-      try {
-        await cancelSubscription();
-        success(t('messages.subscriptionCanceled'), t('messages.subscriptionCanceledDesc'));
-      } catch (error) {
-        console.error('Failed to cancel subscription:', error);
-        alert(t('messages.subscriptionFailed'));
-      }
-    }
-  };
+  // Get current plan from Clerk metadata (primary source of truth)
+  const planInfo = getCurrentPlan();
+  const currentPlan = planInfo?.plan || null;
+  const isSubscribed = planInfo?.isSubscribed || false;
+  const accountStatus = planInfo?.accountStatus || (currentPlan ? 'active' : 'suspended');
 
-  const handleSubscribeToPlan = async (planId: string) => {
-    try {
-      await subscribeToPlan(planId);
-      success(t('messages.subscriptionCreated'), t('messages.subscriptionCreatedDesc'));
-    } catch (error) {
-      console.error('Failed to subscribe to plan:', error);
-      alert(t('messages.subscribeFailed'));
-    }
-  };
+  console.log('🔍 SettingsModal - Current plan info:', {
+    planInfo,
+    currentPlan,
+    isSubscribed,
+    accountStatus,
+    userId: user?.id
+  });
 
   const handleSaveSettings = () => {
     // Save all settings
@@ -212,7 +375,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="fixed inset-0 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={(e) => {
+              // Don't close if clicking on Stripe/Clerk iframes or if downgrade modal is showing
+              if (isCheckoutActive || showDowngradeWarning) {
+                return;
+              }
+              onClose();
+            }}
+            style={{ pointerEvents: (isCheckoutActive || showDowngradeWarning) ? 'none' : 'auto' }}
           />
 
           {/* Modal */}
@@ -258,7 +428,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     activeTab === tab.id
                       ? "bg-purple-50 dark:bg-purple-900 dark:bg-opacity-30 text-purple-700 dark:text-purple-300"
@@ -273,7 +443,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6" style={{ overflowY: 'scroll !important' as any }}>
             {activeTab === "profile" && (
               <div className="space-y-6">
                 <div>
@@ -387,79 +557,155 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             {activeTab === "billing" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Billing & Usage</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Billing & Usage</h3>
 
-                  {/* Current Subscription */}
-                  {isSubscribed && (
+                  {/* Current Subscription Status */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                      <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-4">
                         <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
                           Current Subscription
                         </h4>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          currentPlan?.status === 'active'
+                        isSubscribed
                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                         }`}>
-                          {(currentPlan?.status || 'active').replace('_', ' ').toUpperCase()}
+                        {isSubscribed ? 'ACTIVE' : 'FREE'}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <h5 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                            Plan Details
-                          </h5>
-                          <div className="space-y-2">
+                    <div className="space-y-3">
                             <div className="flex justify-between">
                               <span className="text-gray-600 dark:text-gray-400">Plan:</span>
-                              <span className="font-medium text-gray-900 dark:text-white capitalize">
-                                {currentPlan?.plan || 'free'}
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {currentPlan === 'northstar_basic' ? 'Northstar Basic' :
+                           currentPlan === 'northstar_pro' ? 'Northstar Pro' :
+                           accountStatus === 'suspended' ? 'No Active Subscription' : 'Unknown'}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600 dark:text-gray-400">Status:</span>
-                              <span className="font-medium text-gray-900 dark:text-white capitalize">
-                                {currentPlan?.status?.replace('_', ' ') || 'active'}
+                        <span className={`font-medium ${
+                          accountStatus === 'active' ? 'text-green-600 dark:text-green-400' :
+                          accountStatus === 'suspended' ? 'text-red-600 dark:text-red-400' :
+                          'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {accountStatus === 'active' ? 'Active' :
+                           accountStatus === 'suspended' ? 'Suspended' :
+                           'Unknown'}
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div>
-                          <h5 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                            Actions
-                          </h5>
-                          <div className="space-y-3">
-                            <button
-                              onClick={() => alert('Payment method update coming soon!')}
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
-                            >
-                              Update Payment Method
-                            </button>
-                            <button
-                              onClick={handleCancelSubscription}
-                              className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
-                            >
-                              Cancel Subscription
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Usage Dashboard */}
+                  {/* Usage Stats */}
                   <div className="mb-6">
-                    <UsageDashboard />
+                    <UsageStats currentPlan={currentPlan} />
                   </div>
 
-                  {/* Available Plans */}
+                  {/* Available Plans - Custom UI since Clerk's PricingTable renders checkout outside modal */}
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                       Available Plans
                     </h4>
-                    <PricingTable />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Northstar Basic Plan */}
+                      <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:border-purple-500 transition-colors">
+                        <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Northstar Basic</h5>
+                        <div className="mb-4">
+                          <span className="text-3xl font-bold text-gray-900 dark:text-white">$4.99</span>
+                          <span className="text-gray-600 dark:text-gray-400">/month</span>
+                        </div>
+                        <ul className="space-y-2 mb-6">
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            AI-Powered OCR
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Smart Search
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            2 Unified Dashboards
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            1GB File Storage
+                          </li>
+                        </ul>
+                        <button
+                          onClick={() => handleSubscribe('northstar_basic')}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={currentPlan === 'northstar_basic' || isBillingLoading}
+                        >
+                          {isBillingLoading ? 'Processing...' :
+                           currentPlan === 'northstar_basic' ? 'Current Plan' :
+                           currentPlan === 'northstar_pro' ? 'Downgrade' :
+                           'Subscribe'}
+                        </button>
+                      </div>
+
+                      {/* Northstar Pro Plan */}
+                      <div className="border-2 border-purple-500 rounded-lg p-6 relative">
+                        <div className="absolute top-0 right-0 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">
+                          POPULAR
+                        </div>
+                        <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Northstar Pro</h5>
+                        <div className="mb-4">
+                          <span className="text-3xl font-bold text-gray-900 dark:text-white">$14.99</span>
+                          <span className="text-gray-600 dark:text-gray-400">/month</span>
+                        </div>
+                        <ul className="space-y-2 mb-6">
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Everything in Basic
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Unlimited AI Usage
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Unlimited Storage
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            AI Study Buddy
+                          </li>
+                          <li className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Academic Analytics
+                          </li>
+                        </ul>
+                        <button
+                          onClick={() => handleSubscribe('northstar_pro')}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={currentPlan === 'northstar_pro' || isBillingLoading}
+                        >
+                          {isBillingLoading ? 'Processing...' : currentPlan === 'northstar_pro' ? 'Current Plan' : 'Subscribe'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Billing Information */}
@@ -756,6 +1002,75 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         isOpen={isAssignmentMasterModalOpen}
         onClose={() => setIsAssignmentMasterModalOpen(false)}
       />
+
+      {/* Downgrade Warning Modal */}
+      <AnimatePresence>
+        {showDowngradeWarning && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-[10000]">
+            {/* Backdrop - click to close */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/30"
+              onClick={cancelDowngrade}
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Confirm Downgrade
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  You are about to downgrade from <strong>Northstar Pro</strong> to <strong>Northstar Basic</strong>.
+                </p>
+                <div className="bg-yellow-50 dark:bg-yellow-900 dark:bg-opacity-20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-300 font-medium mb-2">
+                    ⚠️ Important: Potential Data Loss
+                  </p>
+                  <ul className="text-sm text-yellow-700 dark:text-yellow-400 space-y-1 list-disc list-inside">
+                    <li>Your AI usage will be limited to <strong>50,000 tokens/month</strong> (from unlimited)</li>
+                    <li>Your storage will be limited to <strong>1GB</strong> (from unlimited)</li>
+                    <li>If you have exceeded these limits, older files and AI history may be archived or removed</li>
+                    <li>Access to <strong>AI Study Buddy</strong> and <strong>Academic Analytics</strong> will be removed</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This change will take effect at the end of your current billing period. Are you sure you want to continue?
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDowngrade}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDowngrade}
+                className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors"
+              >
+                Yes, Downgrade to Basic
+              </button>
+            </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

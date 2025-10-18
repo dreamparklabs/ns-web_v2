@@ -17,6 +17,11 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import * as Sentry from "@sentry/react-router";
+import { StatsigProvider, useClientAsyncInit } from '@statsig/react-bindings';
+import { StatsigAutoCapturePlugin } from '@statsig/web-analytics';
+import { StatsigSessionReplayPlugin } from '@statsig/session-replay';
+import { useUserSetup } from "./hooks/useUserSetup";
+import { StatsigUserBinder } from "./components/StatsigUserBinder";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -119,6 +124,100 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   );
 }
 
+function StatsigShell({ children }: { children: React.ReactNode }) {
+  const { isLoaded, userId, isSignedIn } = useAuth();
+  const { convexUser, user } = useUserSetup();
+
+  // Get the actual Clerk user ID - this is what we'll pass to Statsig
+  const clerkUserId = userId || user?.id;
+
+  // Get user's plan from Clerk publicMetadata
+  const subscription = user?.publicMetadata?.subscription as any;
+  // @ts-ignore - Clerk's experimental billing API
+  const clerkSubscription = user?.subscriptions?.[0];
+  const userPlan = clerkSubscription?.plan
+    || subscription?.plan
+    || (subscription?.status === 'suspended' ? null : 'free_user');
+
+  // Debug logging
+  console.log('🔍 StatsigShell Debug:', {
+    isLoaded,
+    isSignedIn,
+    userId,
+    clerkUserId,
+    userFromHook: user?.id,
+    convexUserClerkId: convexUser?.clerkUserId,
+    convexUserId: convexUser?._id,
+    userPlan,
+    subscription: subscription?.plan,
+    clerkSubscription: clerkSubscription?.plan,
+    willInitializeStatsig: !!(isLoaded && clerkUserId),
+  });
+
+  // Build user properties for Statsig
+  const userProperties = clerkUserId ? {
+    email: user?.emailAddresses?.[0]?.emailAddress,
+    firstName: user?.firstName,
+    lastName: user?.lastName,
+    clerkUserId: clerkUserId,
+    convexUserId: convexUser?._id,
+    // IMPORTANT: Add plan to custom properties for Statsig feature gates
+    custom: {
+      plan: userPlan,
+    }
+  } : {};
+
+  // Log Statsig SDK key status
+  const statsigClientKey = import.meta.env.VITE_STATSIG_CLIENT_KEY;
+  console.log('🔍 Statsig Client Key Status:', {
+    hasKey: !!statsigClientKey,
+    keyPreview: statsigClientKey ? `${statsigClientKey.substring(0, 20)}...` : 'MISSING',
+  });
+
+  const { client } = useClientAsyncInit(
+    statsigClientKey,
+    clerkUserId ? {
+      userID: clerkUserId,  // Always use Clerk user ID, never fallback
+      ...userProperties
+    } : {
+      userID: 'anonymous',  // Only use anonymous if truly not signed in
+    },
+    { plugins: [new StatsigAutoCapturePlugin(), new StatsigSessionReplayPlugin()] }
+  );
+
+  console.log('🔍 Statsig Client Status:', {
+    clientExists: !!client,
+    clientInitialized: client ? 'yes' : 'no',
+  });
+
+  // Show loading while we wait for Clerk to load
+  if (!isLoaded) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-gray-600 dark:text-gray-400">Loading authentication...</div>
+    </div>;
+  }
+
+  // FIXED: Only show "Loading user data" if user IS signed in but we don't have their ID yet
+  // If user is not signed in (isSignedIn === false), allow the app to render normally
+  if (isLoaded && isSignedIn && !clerkUserId) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-gray-600 dark:text-gray-400">Loading user data...</div>
+    </div>;
+  }
+
+  return (
+    <StatsigProvider
+      key={clerkUserId || 'anonymous'}
+      client={client}
+      loadingComponent={<div>Loading features...</div>}
+    >
+      {/* Keeps Statsig user in sync with Clerk */}
+      <StatsigUserBinder />
+      {children}
+    </StatsigProvider>
+  );
+}
+
 export default function App() {
   // Only render ClerkProvider if we have valid keys
   if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY.includes('placeholder')) {
@@ -156,15 +255,17 @@ export default function App() {
     return (
       <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
         <PostHogProvider>
-          <ThemeProvider>
-            <LanguageProvider>
-              <NotificationProvider>
-                <BillingProvider>
-                  <Outlet />
-                </BillingProvider>
-              </NotificationProvider>
-            </LanguageProvider>
-          </ThemeProvider>
+          <StatsigShell>
+            <ThemeProvider>
+              <LanguageProvider>
+                <NotificationProvider>
+                  <BillingProvider>
+                    <Outlet />
+                  </BillingProvider>
+                </NotificationProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </StatsigShell>
         </PostHogProvider>
       </ClerkProvider>
     );
@@ -174,15 +275,17 @@ export default function App() {
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <PostHogProvider>
-          <ThemeProvider>
-            <LanguageProvider>
-              <NotificationProvider>
-                <BillingProvider>
-                  <Outlet />
-                </BillingProvider>
-              </NotificationProvider>
-            </LanguageProvider>
-          </ThemeProvider>
+          <StatsigShell>
+            <ThemeProvider>
+              <LanguageProvider>
+                <NotificationProvider>
+                  <BillingProvider>
+                    <Outlet />
+                  </BillingProvider>
+                </NotificationProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </StatsigShell>
         </PostHogProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>

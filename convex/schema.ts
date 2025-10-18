@@ -138,6 +138,14 @@ export default defineSchema({
     d2lUserKey: v.optional(v.string()),
     d2lBaseUrl: v.optional(v.string()),
     d2lSyncEnabled: v.optional(v.boolean()),
+    // Subscription/Billing fields (synced from Clerk/Stripe)
+    subscriptionPlan: v.optional(v.string()), // 'northstar_basic', 'northstar_pro'
+    subscriptionStatus: v.optional(v.string()), // 'active', 'canceled', 'past_due', 'suspended', etc.
+    subscriptionId: v.optional(v.string()), // Stripe subscription ID
+    stripeCustomerId: v.optional(v.string()), // Stripe customer ID
+    currentPeriodEnd: v.optional(v.float64()), // Timestamp when current period ends
+    cancelAtPeriodEnd: v.optional(v.boolean()), // Whether subscription is set to cancel
+    accountStatus: v.optional(v.string()), // 'active', 'suspended' - controls app access
     d2lLastSyncAt: v.optional(v.float64()),
     // D2L OAuth fields (New SSO method)
     d2lAccessToken: v.optional(v.string()),

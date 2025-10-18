@@ -5,6 +5,8 @@ import { api } from "../../convex/_generated/api";
 import { useUser } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CreateTermModal from "./CreateTermModal";
+import { useFeatureGate } from "../hooks/useFeatureGate";
+import { useClerkBilling } from "../hooks/useClerkBilling";
 
 interface TermSelectorModalProps {
   isOpen: boolean;
@@ -18,15 +20,21 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
   const location = useLocation();
   const navigate = useNavigate();
   const [isCreateTermModalOpen, setIsCreateTermModalOpen] = useState(false);
-  
+  const { trackUsage } = useFeatureGate();
+  const { subscribeToPlan, isLoading: isBillingLoading } = useClerkBilling();
+
   // Get current global term filter
   const currentGlobalTerm = searchParams.get("globalTerm") || "all";
-  
-  // Get user's terms
-  const terms = useQuery(
-    api.terms.getUserTermsByClerkId,
+
+  // Get user's accessible terms (filtered by subscription)
+  const accessibleTermsData = useQuery(
+    api.terms.getAccessibleUserTerms,
     user?.id ? { clerkUserId: user.id } : "skip"
   );
+
+  const terms = accessibleTermsData?.terms || [];
+  const lockedTerms = accessibleTermsData?.lockedTerms || [];
+  const isBasicPlan = accessibleTermsData?.plan === 'northstar_basic';
 
   // Handle term selection
   const handleTermSelect = (termId: string) => {
@@ -184,8 +192,8 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
                 )}
               </button>
 
-              {/* User's Terms */}
-              {terms?.map((term) => (
+              {/* User's Accessible Terms */}
+              {terms.map((term) => (
                 <button
                   key={term._id}
                   onClick={() => handleTermSelect(term._id)}
@@ -215,6 +223,72 @@ export default function TermSelectorModal({ isOpen, onClose }: TermSelectorModal
                   )}
                 </button>
               ))}
+
+              {/* Locked Terms (Basic Plan Only) */}
+              {isBasicPlan && lockedTerms.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Locked Terms ({lockedTerms.length})
+                    </h4>
+                  </div>
+
+                  {lockedTerms.map((term) => (
+                    <div
+                      key={term._id}
+                      className="w-full flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 opacity-60 mb-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <div className="text-left">
+                          <div className="font-medium text-gray-600 dark:text-gray-400">{term.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-500">
+                            {new Date(term.startDate).toLocaleDateString()} - {new Date(term.endDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Upgrade Banner */}
+                  <div className="mt-4 p-4 rounded-lg bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900 dark:to-blue-900 dark:bg-opacity-20 border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-purple-900 dark:text-purple-200 mb-1">
+                          Upgrade to access all your terms
+                        </p>
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mb-3">
+                          Get unlimited term dashboards with Northstar Pro
+                        </p>
+                        <button
+                          onClick={async () => {
+                            trackUsage('unlimited_unified_dashboards', { action: 'upgrade_clicked_from_selector' });
+                            try {
+                              // Get current page URL without search params to return to same page
+                              const returnPath = `${location.pathname}${location.search}`;
+                              await subscribeToPlan('northstar_pro', returnPath);
+                            } catch (error) {
+                              console.error('Failed to upgrade:', error);
+                            }
+                          }}
+                          disabled={isBillingLoading}
+                          className="px-4 py-2 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isBillingLoading ? 'Processing...' : 'Upgrade to Pro'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Create New Term Button */}
               <button

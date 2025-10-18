@@ -1,10 +1,105 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// Get total storage used by a user
+export const getUserTotalStorage = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const files = await ctx.db
+      .query("files")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .collect();
+
+    const totalBytes = files.reduce((sum, file) => sum + (file.fileSize || 0), 0);
+    return totalBytes;
+  },
+});
+
+// Get storage quota and usage for a user
+export const getStorageQuota = query({
+  args: {
+    clerkUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("clerkUserId"), args.clerkUserId))
+      .first();
+
+    if (!user) {
+      return { used: 0, limit: 0, plan: 'free', percentUsed: 0 };
+    }
+
+    const subscriptionPlan = user.subscriptionPlan || 'free';
+    const BASIC_LIMIT = 1 * 1024 * 1024 * 1024; // 1GB in bytes
+
+    const files = await ctx.db
+      .query("files")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+
+    const totalBytes = files.reduce((sum, file) => sum + (file.fileSize || 0), 0);
+
+    const limit = subscriptionPlan === 'northstar_pro' ? -1 : BASIC_LIMIT; // -1 means unlimited
+    const percentUsed = limit === -1 ? 0 : Math.round((totalBytes / limit) * 100);
+
+    return {
+      used: totalBytes,
+      limit,
+      plan: subscriptionPlan,
+      percentUsed,
+      isUnlimited: limit === -1,
+    };
+  },
+});
+
+// Get shared link count and quota
+export const getSharedLinksQuota = query({
+  args: {
+    clerkUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("clerkUserId"), args.clerkUserId))
+      .first();
+
+    if (!user) {
+      return { used: 0, limit: 0, plan: 'free' };
+    }
+
+    const subscriptionPlan = user.subscriptionPlan || 'free';
+    const BASIC_LIMIT = 2; // 2 shared links for Basic users
+
+    const sharedFiles = await ctx.db
+      .query("files")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), user._id),
+          q.eq(q.field("shared"), true)
+        )
+      )
+      .collect();
+
+    const sharedCount = sharedFiles.length;
+    const limit = subscriptionPlan === 'northstar_pro' ? -1 : BASIC_LIMIT; // -1 means unlimited
+
+    return {
+      used: sharedCount,
+      limit,
+      plan: subscriptionPlan,
+      isUnlimited: limit === -1,
+    };
+  },
+});
+
 // Generate upload URL for file storage (authenticated)
 export const generateUploadUrl = mutation({
   args: {
     clerkUserId: v.string(),
+    fileSize: v.number(), // Size of file to be uploaded
   },
   handler: async (ctx, args) => {
     // Verify user authentication
@@ -21,6 +116,25 @@ export const generateUploadUrl = mutation({
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    // Check storage limits for Basic plan users
+    const subscriptionPlan = user.subscriptionPlan || 'free';
+    if (subscriptionPlan === 'northstar_basic') {
+      const BASIC_LIMIT = 1 * 1024 * 1024 * 1024; // 1GB in bytes
+
+      const files = await ctx.db
+        .query("files")
+        .filter((q) => q.eq(q.field("userId"), user._id))
+        .collect();
+
+      const currentUsage = files.reduce((sum, file) => sum + (file.fileSize || 0), 0);
+      const newUsage = currentUsage + args.fileSize;
+
+      if (newUsage > BASIC_LIMIT) {
+        const percentUsed = Math.round((currentUsage / BASIC_LIMIT) * 100);
+        throw new Error(`STORAGE_LIMIT_EXCEEDED:You've reached your 1GB storage limit (${percentUsed}% used). Upgrade to Pro for unlimited storage.`);
+      }
     }
 
     return await ctx.storage.generateUploadUrl();
@@ -435,8 +549,33 @@ export const shareFile = mutation({
       throw new Error("File not found or access denied");
     }
 
-    // Generate a unique share token
-    const shareToken = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Check if file is already shared
+    if (!file.shared) {
+      // Check shared link limits for Basic plan users
+      const subscriptionPlan = user.subscriptionPlan || 'free';
+      if (subscriptionPlan === 'northstar_basic') {
+        const BASIC_LIMIT = 2; // 2 shared links for Basic users
+
+        const sharedFiles = await ctx.db
+          .query("files")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("userId"), user._id),
+              q.eq(q.field("shared"), true)
+            )
+          )
+          .collect();
+
+        const currentSharedCount = sharedFiles.length;
+
+        if (currentSharedCount >= BASIC_LIMIT) {
+          throw new Error(`SHARE_LIMIT_EXCEEDED:You've reached your limit of ${BASIC_LIMIT} shared links. Upgrade to Pro for unlimited file sharing.`);
+        }
+      }
+    }
+
+    // Generate a unique share token (or reuse existing)
+    const shareToken = file.shareToken || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     await ctx.db.patch(args.fileId, {
       shared: true,

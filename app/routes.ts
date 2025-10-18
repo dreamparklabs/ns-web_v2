@@ -3,6 +3,7 @@ import { type RouteConfig, index, route, layout } from "@react-router/dev/routes
 export default [
   index("routes/home.tsx"),
   route("onboarding", "routes/onboarding.tsx"),
+  route("pricing", "routes/pricing.tsx"),
   route("sign-in/*", "routes/sign-in.tsx"),
   route("sign-up/*", "routes/sign-up.tsx"),
   route("logout", "routes/logout.tsx"),
@@ -11,7 +12,7 @@ export default [
   // Extension authentication routes
       route("extension-auth", "routes/extension-auth.tsx"),
       route("extension-auth-callback", "routes/extension-auth-callback.tsx"),
-      
+
       // Public file sharing
       route("share/:shareToken", "routes/share.$shareToken.tsx"),
 
@@ -22,7 +23,13 @@ export default [
   route("api/auth/realuser", "routes/api.auth.realuser.tsx"),
   route("api/auth/login", "routes/api.auth.login.tsx"),
   route("api/convex", "routes/api.convex.tsx"),
-  
+
+  // Billing API routes
+  route("api/billing/create-subscription", "routes/api.billing.create-subscription.tsx"),
+  route("api/billing/create-checkout", "routes/api.billing.create-checkout.tsx"),
+  route("api/billing/sync-subscription", "routes/api.billing.sync-subscription.tsx"),
+  route("api/billing/clear-subscription", "routes/api.billing.clear-subscription.tsx"),
+
   // LTI (Learning Tools Interoperability) routes for universal D2L access
   route("api/lti/launch", "routes/api.lti.launch.tsx"),
   route("api/lti/config.xml", "routes/api.lti.config.tsx"),
@@ -39,7 +46,7 @@ export default [
     route("app/v2/files", "routes/files.tsx"),
         route("app/v2/files/:courseId", "routes/files.$courseId.tsx"),
     route("app/v2/settings", "routes/settings.tsx"),
-    
+
     // LTI dashboard (universal D2L access)
     route("app/lti/dashboard", "routes/app.lti.dashboard.tsx"),
   ]),
