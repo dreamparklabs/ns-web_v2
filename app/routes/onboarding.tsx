@@ -261,7 +261,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen lg:h-screen bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 flex flex-col lg:flex-row">
+    <div className="min-h-screen h-screen bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 flex flex-col lg:flex-row">
       {/* Left Side - Header & Progress */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 py-8 lg:px-12 lg:py-0">
         <div className="space-y-6 lg:space-y-8">
