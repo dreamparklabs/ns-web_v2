@@ -44,10 +44,18 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
     }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPlan) {
-      onComplete({ selectedPlan });
+      trackUsage('plan_selected', { plan: selectedPlan });
+      try {
+        // This will redirect to Stripe checkout, so we don't call onComplete
+        // The user will be redirected back after successful payment
+        await subscribeToPlan(selectedPlan, '/app/v2/dashboard');
+      } catch (error) {
+        console.error("Failed to subscribe to plan:", error);
+        alert("Failed to subscribe to plan. Please try again.");
+      }
     }
   };
 

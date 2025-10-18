@@ -116,6 +116,7 @@ export default function OnboardingStepPage() {
   const updateSchoolInfo = useMutation(api.users.updateUserSchoolInfo);
   const createTerm = useMutation(api.terms.createTerm);
   const completeGuidedTour = useMutation(api.users.completeGuidedTour);
+  const updateUserSubscription = useMutation(api.subscriptions.updateUserSubscription);
 
   // Step data
   const [demographicsData, setDemographicsData] = useState({
@@ -220,6 +221,14 @@ export default function OnboardingStepPage() {
     
     setIsLoading(true);
     try {
+      // Save the selected plan to Convex as pending
+      await updateUserSubscription({
+        clerkUserId: convexUser.clerkUserId,
+        subscriptionPlan: data.selectedPlan,
+        subscriptionStatus: 'pending',
+        accountStatus: 'pending_payment',
+      });
+
       // Complete the guided tour and mark demographics as complete
       await completeGuidedTour({
         userId: convexUser._id,
@@ -227,11 +236,11 @@ export default function OnboardingStepPage() {
       
       setPlanData(data);
       
-      // Redirect to dashboard after successful completion
-      navigate("/app/v2/dashboard");
+      // The PlanSelectionStep component will handle the Stripe checkout redirect
+      // so we don't navigate here - the user will be redirected to Stripe
     } catch (error) {
-      console.error("Failed to complete onboarding:", error);
-      alert("There was an issue completing your setup. Please try again or contact support if the problem persists.");
+      console.error("Failed to save plan selection:", error);
+      alert("There was an issue saving your plan selection. Please try again or contact support if the problem persists.");
     } finally {
       setIsLoading(false);
     }
