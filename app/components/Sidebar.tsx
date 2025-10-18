@@ -214,15 +214,18 @@ const Sidebar = memo(function Sidebar({ currentPath }: SidebarProps) {
   };
 
   // Handle opening/closing settings modal via URL search params
-  const openSettingsModal = () => {
+  const openSettingsModal = (tab: string = 'profile') => {
     const newSearchParams = new URLSearchParams(location.search);
     newSearchParams.set('settings', 'true');
+    newSearchParams.set('tab', tab);
     navigate(`${location.pathname}?${newSearchParams.toString()}`);
   };
 
   const closeSettingsModal = () => {
     const newSearchParams = new URLSearchParams(location.search);
     newSearchParams.delete('settings');
+    newSearchParams.delete('tab');
+    newSearchParams.delete('checkout');
     const searchString = newSearchParams.toString();
     navigate(`${location.pathname}${searchString ? `?${searchString}` : ''}`);
   };

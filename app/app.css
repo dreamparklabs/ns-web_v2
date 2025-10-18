@@ -191,3 +191,78 @@ html:not(.dark) body {
     max-width: 100%;
   }
 }
+
+/* Clerk Billing & Stripe Payment Elements */
+/* Ensure Clerk/Stripe elements render properly within modals */
+
+/* Target Clerk root elements */
+.cl-rootBox,
+.cl-component,
+[class*="cl-"] {
+  position: relative !important;
+}
+
+/* Clerk modal overlays should be above settings modal */
+.cl-modalContent,
+.cl-modalBackdrop {
+  z-index: 9999 !important;
+}
+
+/* FORCE Stripe iframes to be visible */
+iframe[src*="stripe.com"],
+iframe[src*="b.stripecdn.com"],
+iframe[src*="js.stripe.com"] {
+  position: relative !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-height: 400px !important;
+}
+
+/* Stripe Elements container - FORCE VISIBILITY */
+.__PrivateStripeElement,
+.__PrivateStripeElement iframe,
+.__PrivateStripeElement-input {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Payment Element containers - FORCE VISIBILITY */
+[class*="PaymentElement"],
+[class*="StripeElement"],
+.StripeElement,
+div[class*="payment"],
+div[class*="Payment"] {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-height: 300px !important;
+}
+
+/* Ensure payment form is visible */
+div[role="form"],
+form[class*="payment"],
+form[class*="Payment"] {
+  position: relative !important;
+  z-index: 1 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Target any divs that might contain payment elements */
+.clerk-pricing-table-wrapper > div,
+.clerk-pricing-table-wrapper > div > div {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}

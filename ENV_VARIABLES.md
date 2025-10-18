@@ -32,6 +32,9 @@ VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 POSTHOG_API_KEY=phc_your_project_key_here
 POSTHOG_HOST=https://us.i.posthog.com
 
+# Statsig Feature Flags & Analytics
+VITE_STATSIG_CLIENT_KEY=client-your_statsig_client_key_here
+
 # Push Notifications (VAPID Keys)
 VITE_VAPID_PUBLIC_KEY=your_vapid_public_key_here
 VITE_VAPID_PRIVATE_KEY=your_vapid_private_key_here
@@ -153,6 +156,7 @@ D2L_APP_KEY=your_d2l_app_key
 | `VITE_PUBLIC_POSTHOG_HOST` | PostHog host URL (client) | ✅ Yes | Frontend |
 | `POSTHOG_API_KEY` | PostHog project API key (server) | ✅ Yes | Convex (LLM tracking) |
 | `POSTHOG_HOST` | PostHog host URL (server) | ✅ Yes | Convex (LLM tracking) |
+| `VITE_STATSIG_CLIENT_KEY` | Statsig Client SDK key for feature flags | ✅ Yes | Frontend (feature gates & events) |
 | `VITE_GTM_ID` | Google Tag Manager container ID | ❌ Optional | Frontend |
 | `VITE_GA_MEASUREMENT_ID` | Google Analytics 4 measurement ID | ❌ Optional | Frontend |
 | `VITE_SENTRY_DSN` | Sentry error tracking DSN | ⚠️ Recommended | Frontend |
@@ -249,6 +253,9 @@ These should **NOT** have the `VITE_` prefix:
 
 ### "PostHog not loading"
 → Verify `VITE_PUBLIC_POSTHOG_KEY` and `VITE_PUBLIC_POSTHOG_HOST` are set
+
+### "Statsig not initializing" or "No events in Statsig"
+→ Add `VITE_STATSIG_CLIENT_KEY` to `.env.local` (get from Statsig Console → Settings → API Keys)
 
 ### "LLM tracking not working"
 → Add `POSTHOG_API_KEY` and `GEMINI_API_KEY` to Convex environment variables

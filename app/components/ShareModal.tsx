@@ -4,6 +4,8 @@ import { useUser } from "@clerk/clerk-react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import FeatureUpgradePrompt from "./FeatureUpgradePrompt";
+import { useFeatureGate } from "../hooks/useFeatureGate";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -20,6 +22,8 @@ export default function ShareModal({ isOpen, onClose, fileId, fileName, isShared
   const [isFileShared, setIsFileShared] = useState(isShared);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const { trackUsage } = useFeatureGate();
 
   const shareFile = useMutation(api.files.shareFile);
   const unshareFile = useMutation(api.files.unshareFile);
@@ -61,14 +65,25 @@ export default function ShareModal({ isOpen, onClose, fileId, fileName, isShared
         await unshareFile({ fileId, clerkUserId: user.id });
         setIsFileShared(false);
         setCurrentShareToken(undefined);
+        trackUsage('unlimited_storage_share', { action: 'file_unshared' });
       } else {
         const result = await shareFile({ fileId, clerkUserId: user.id });
         setIsFileShared(true);
         setCurrentShareToken(result.shareToken);
+        trackUsage('unlimited_storage_share', { action: 'file_shared' });
       }
     } catch (error) {
       console.error("Failed to toggle sharing:", error);
-      alert(`Failed to ${isFileShared ? 'unshare' : 'share'} file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check if it's a share limit error
+      if (errorMessage.includes('SHARE_LIMIT_EXCEEDED')) {
+        trackUsage('unlimited_storage_share', { action: 'share_limit_reached' });
+        setShowUpgradePrompt(true);
+        alert(errorMessage.split(':')[1] || 'Share limit reached. Please upgrade to continue sharing files.');
+      } else {
+        alert(`Failed to ${isFileShared ? 'unshare' : 'share'} file: ${errorMessage}`);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -83,9 +98,19 @@ export default function ShareModal({ isOpen, onClose, fileId, fileName, isShared
       await unshareFile({ fileId, clerkUserId: user.id });
       const result = await shareFile({ fileId, clerkUserId: user.id });
       setCurrentShareToken(result.shareToken);
+      trackUsage('unlimited_storage_share', { action: 'link_regenerated' });
     } catch (error) {
       console.error("Failed to regenerate link:", error);
-      alert(`Failed to regenerate link: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check if it's a share limit error
+      if (errorMessage.includes('SHARE_LIMIT_EXCEEDED')) {
+        trackUsage('unlimited_storage_share', { action: 'share_limit_reached' });
+        setShowUpgradePrompt(true);
+        alert(errorMessage.split(':')[1] || 'Share limit reached. Please upgrade to continue sharing files.');
+      } else {
+        alert(`Failed to regenerate link: ${errorMessage}`);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -348,6 +373,13 @@ export default function ShareModal({ isOpen, onClose, fileId, fileName, isShared
           </motion.div>
         </div>
       )}
+
+      {/* Upgrade Prompt */}
+      <FeatureUpgradePrompt
+        featureId="unlimited_storage_share"
+        isOpen={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+      />
     </AnimatePresence>
   );
 }

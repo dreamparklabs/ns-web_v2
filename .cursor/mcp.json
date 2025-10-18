@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "statsig": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://api.statsig.com/v1/mcp",
+        "--header",
+        "statsig-api-key:${AUTH_TOKEN}"
+      ],
+      "env": {
+        "AUTH_TOKEN": "console-3lmgDkEnMNhkBc3itE9uQq3r9VdUgXg1fCtmOiW3MF1"
+      }
+    }
+  }
+}

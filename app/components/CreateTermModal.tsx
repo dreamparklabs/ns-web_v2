@@ -3,6 +3,8 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useUser } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFeatureGate } from "../hooks/useFeatureGate";
+import FeatureUpgradePrompt from "./FeatureUpgradePrompt";
 
 interface CreateTermModalProps {
   isOpen: boolean;
@@ -16,14 +18,26 @@ export default function CreateTermModal({ isOpen, onClose, onTermCreated }: Crea
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState<"active" | "upcoming" | "completed">("active");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const modalRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   
   const { user } = useUser();
-  
+  const { hasAccess, checkAccess, trackUsage, currentPlan } = useFeatureGate();
+
+  // Get accessible terms info to show user their limit status
+  const accessibleTerms = useQuery(
+    api.terms.getAccessibleUserTerms,
+    user?.id ? { clerkUserId: user.id } : "skip"
+  );
+
   // Mutation to create term
   const createTerm = useMutation(api.terms.createTermByClerkId);
+
+  // Check if user can create more terms
+  const canCreateTerm = currentPlan === 'northstar_pro' || (accessibleTerms && accessibleTerms.totalCount < 2);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -33,6 +47,7 @@ export default function CreateTermModal({ isOpen, onClose, onTermCreated }: Crea
       setEndDate("");
       setStatus("active");
       setIsSubmitting(false);
+      setErrorMessage(null);
       nameInputRef.current?.focus();
     }
   }, [isOpen]);
@@ -42,10 +57,25 @@ export default function CreateTermModal({ isOpen, onClose, onTermCreated }: Crea
     e.preventDefault();
     
     if (!name.trim() || !startDate || !endDate || !user?.id) return;
-    
+
+    // Check if user has access to create more terms
+    if (!canCreateTerm) {
+      setShowUpgradePrompt(true);
+      trackUsage('2_unified_dashboards', { action: 'term_limit_reached' });
+      return;
+    }
+
     setIsSubmitting(true);
-    
+    setErrorMessage(null);
+
     try {
+      // Track feature usage
+      if (currentPlan === 'northstar_basic') {
+        trackUsage('2_unified_dashboards', { action: 'term_created' });
+      } else if (currentPlan === 'northstar_pro') {
+        trackUsage('unlimited_unified_dashboards', { action: 'term_created' });
+      }
+
       const termId = await createTerm({
         clerkUserId: user.id,
         name: name.trim(),
@@ -58,6 +88,15 @@ export default function CreateTermModal({ isOpen, onClose, onTermCreated }: Crea
       onClose();
     } catch (error) {
       console.error("Failed to create term:", error);
+
+      // Check if error is a term limit error
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg.includes('TERM_LIMIT_REACHED')) {
+        setShowUpgradePrompt(true);
+        trackUsage('2_unified_dashboards', { action: 'term_limit_reached' });
+      } else {
+        setErrorMessage('Failed to create term. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -175,6 +214,54 @@ export default function CreateTermModal({ isOpen, onClose, onTermCreated }: Crea
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+          {/* Term Limit Warning for Basic Users */}
+          {currentPlan === 'northstar_basic' && accessibleTerms && (
+            <div className={`p-4 rounded-lg border ${
+              accessibleTerms.totalCount >= 2
+                ? 'bg-orange-50 dark:bg-orange-900 dark:bg-opacity-20 border-orange-200 dark:border-orange-800'
+                : 'bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border-blue-200 dark:border-blue-800'
+            }`}>
+              <div className="flex items-start gap-3">
+                <svg className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                  accessibleTerms.totalCount >= 2
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-blue-600 dark:text-blue-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className={`text-sm font-medium ${
+                    accessibleTerms.totalCount >= 2
+                      ? 'text-orange-900 dark:text-orange-200'
+                      : 'text-blue-900 dark:text-blue-200'
+                  }`}>
+                    {accessibleTerms.totalCount >= 2
+                      ? `You've reached your ${accessibleTerms.limit}-term limit`
+                      : `Term Usage: ${accessibleTerms.totalCount} / ${accessibleTerms.limit}`
+                    }
+                  </p>
+                  <p className={`text-xs mt-1 ${
+                    accessibleTerms.totalCount >= 2
+                      ? 'text-orange-700 dark:text-orange-300'
+                      : 'text-blue-700 dark:text-blue-300'
+                  }`}>
+                    {accessibleTerms.totalCount >= 2
+                      ? 'Upgrade to Pro for unlimited terms'
+                      : 'Upgrade to Pro to create unlimited terms'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="p-4 rounded-lg border bg-red-50 dark:bg-red-900 dark:bg-opacity-20 border-red-200 dark:border-red-800">
+              <p className="text-sm text-red-900 dark:text-red-200">{errorMessage}</p>
+            </div>
+          )}
+
           {/* Term Name */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -352,6 +439,13 @@ export default function CreateTermModal({ isOpen, onClose, onTermCreated }: Crea
         </motion.div>
         </div>
       )}
+
+      {/* Upgrade Prompt Modal */}
+      <FeatureUpgradePrompt
+        featureId="unlimited_unified_dashboards"
+        isOpen={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+      />
     </AnimatePresence>
   );
 }

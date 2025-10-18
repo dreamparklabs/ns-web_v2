@@ -1,6 +1,9 @@
 import React from 'react';
+import { useQuery } from 'convex/react';
 import { useClerkBilling, usePlanAccess, useFeatureAccess } from '../hooks/useClerkBilling';
 import { PricingTable } from './ClerkBillingComponents';
+import { api } from '../../convex/_generated/api';
+import { useUser } from '@clerk/clerk-react';
 
 interface UsageDashboardProps {
   showPricingTable?: boolean;
@@ -8,42 +11,82 @@ interface UsageDashboardProps {
 }
 
 export function UsageDashboard({ showPricingTable = false, className = '' }: UsageDashboardProps) {
+  const { user } = useUser();
   const { getCurrentPlan } = useClerkBilling();
   const { currentPlan, isSubscribed } = usePlanAccess();
-  
-  // Mock data for demo purposes - in real implementation, this would come from Clerk billing
+
+  // Get the Convex user to access the Convex _id
+  const convexUser = useQuery(
+    api.users.getUserByClerkId,
+    user?.id ? { clerkUserId: user.id } : "skip"
+  );
+
+  // Get real usage data from cost tracking system using Convex user ID
+  const costSummary = useQuery(
+    api.userCosts.getUserCostSummary,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  // Get real file storage usage
+  const totalStorageBytes = useQuery(
+    api.files.getUserTotalStorage,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  // Plan limits configuration
   const planLimits = {
-    free: {
+    free_user: {
       name: 'Free',
       price: 0,
       aiUsageLimit: 10000,
       storageLimit: 5 * 1024 * 1024 * 1024, // 5GB
     },
-    student_pro: {
-      name: 'Student Pro',
-      price: 9.99,
+    northstar_basic: {
+      name: 'Northstar Basic',
+      price: 4.99,
+      aiUsageLimit: 50000,
+      storageLimit: 1024 * 1024 * 1024, // 1GB
+    },
+    northstar_pro: {
+      name: 'Northstar Pro',
+      price: 14.99,
       aiUsageLimit: Infinity,
       storageLimit: Infinity,
     }
   };
-  
-  const currentPlanInfo = planLimits[currentPlan?.plan as keyof typeof planLimits] || planLimits.free;
-  
-  // Mock usage data
-  const currentAiUsage = 2500; // 2.5k tokens used
-  const currentStorage = 1.2 * 1024 * 1024 * 1024; // 1.2GB used
-  const aiUsagePercentage = (currentAiUsage / currentPlanInfo.aiUsageLimit) * 100;
-  const storageUsagePercentage = (currentStorage / currentPlanInfo.storageLimit) * 100;
+
+  const currentPlanInfo = planLimits[currentPlan?.plan as keyof typeof planLimits] || planLimits.free_user;
+
+  // Calculate real usage data from cost tracking and file storage
+  const currentAiUsage = costSummary?.aiCostUSD ?
+    Math.round(costSummary.aiCostUSD * 1000000 / 0.5) : 0; // Rough token estimate from cost
+  const currentStorage = totalStorageBytes || 0; // Use actual file storage in bytes
+
+  const aiUsagePercentage = currentPlanInfo.aiUsageLimit === Infinity ? 0 :
+    (currentAiUsage / currentPlanInfo.aiUsageLimit) * 100;
+  const storageUsagePercentage = currentPlanInfo.storageLimit === Infinity ? 0 :
+    (currentStorage / currentPlanInfo.storageLimit) * 100;
   const hasExceededAnyLimit = aiUsagePercentage >= 100 || storageUsagePercentage >= 100;
-  
-  const upgradeSuggestion = currentPlan?.plan === 'free' ? {
-    reason: 'You\'re approaching your usage limits. Upgrade to Student Pro for unlimited access.',
-    plan: 'Student Pro',
+
+  const upgradeSuggestion = currentPlan?.plan === 'free_user' ? {
+    reason: 'You\'re approaching your usage limits. Upgrade to Northstar Pro for unlimited access.',
+    plan: 'Northstar Pro',
     features: [
       'Unlimited AI usage',
       'Unlimited file storage',
-      'Grade analytics & insights',
-      'AI-powered recommendations'
+      'Academic Progress Analytics',
+      'AI-Powered Study Buddy',
+      'Homework Help'
+    ]
+  } : currentPlan?.plan === 'northstar_basic' ? {
+    reason: 'Upgrade to Northstar Pro for unlimited access and premium features.',
+    plan: 'Northstar Pro',
+    features: [
+      'Unlimited AI usage',
+      'Unlimited file storage',
+      'Academic Progress Analytics',
+      'AI-Powered Study Buddy',
+      'Homework Help'
     ]
   } : null;
 
@@ -102,7 +145,7 @@ export function UsageDashboard({ showPricingTable = false, className = '' }: Usa
               {formatTokens(currentAiUsage)} / {formatTokens(currentPlanInfo.aiUsageLimit)}
             </span>
           </div>
-          
+
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
             <div
               className={`h-2 rounded-full transition-all duration-300 ${
@@ -115,7 +158,7 @@ export function UsageDashboard({ showPricingTable = false, className = '' }: Usa
               style={{ width: `${Math.min(aiUsagePercentage, 100)}%` }}
             />
           </div>
-          
+
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
             <span>{formatTokens(currentAiUsage)} tokens used</span>
             <span>{formatTokens(currentPlanInfo.aiUsageLimit)} limit</span>
@@ -138,7 +181,7 @@ export function UsageDashboard({ showPricingTable = false, className = '' }: Usa
               {formatBytes(currentStorage)} / {formatBytes(currentPlanInfo.storageLimit)}
             </span>
           </div>
-          
+
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
             <div
               className={`h-2 rounded-full transition-all duration-300 ${
@@ -151,7 +194,7 @@ export function UsageDashboard({ showPricingTable = false, className = '' }: Usa
               style={{ width: `${Math.min(storageUsagePercentage, 100)}%` }}
             />
           </div>
-          
+
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
             <span>{formatBytes(currentStorage)} used</span>
             <span>{formatBytes(currentPlanInfo.storageLimit)} limit</span>
@@ -164,7 +207,7 @@ export function UsageDashboard({ showPricingTable = false, className = '' }: Usa
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Plan Details
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -172,19 +215,23 @@ export function UsageDashboard({ showPricingTable = false, className = '' }: Usa
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">AI Tokens Used</div>
           </div>
-          
+
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {formatBytes(currentStorage)}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Storage Used</div>
           </div>
-          
+
           <div className="text-center">
             <div className={`text-2xl font-bold ${
-              currentPlan?.plan === 'student_pro' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400'
+              currentPlan?.plan === 'northstar_pro' ? 'text-purple-600 dark:text-purple-400' :
+              currentPlan?.plan === 'northstar_basic' ? 'text-blue-600 dark:text-blue-400' :
+              'text-gray-600 dark:text-gray-400'
             }`}>
-              {currentPlan?.plan === 'student_pro' ? 'Pro' : 'Free'}
+              {currentPlan?.plan === 'northstar_pro' ? 'Pro' :
+               currentPlan?.plan === 'northstar_basic' ? 'Basic' :
+               'Free'}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Plan Type</div>
           </div>

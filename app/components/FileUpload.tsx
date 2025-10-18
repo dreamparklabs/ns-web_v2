@@ -4,6 +4,8 @@ import { api } from "../../convex/_generated/api";
 import { useUser } from "@clerk/clerk-react";
 import type { Id } from "../../convex/_generated/dataModel";
 import { processFileForOCRClient, shouldProcessFileForOCRClient } from "../utils/ocr-client";
+import FeatureUpgradePrompt from "./FeatureUpgradePrompt";
+import { useFeatureGate } from "../hooks/useFeatureGate";
 
 interface FileUploadProps {
   assignmentId?: Id<"assignments">;
@@ -32,9 +34,11 @@ export default function FileUpload({
 }: FileUploadProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { user } = useUser();
+  const { trackUsage } = useFeatureGate();
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const saveFile = useMutation(api.files.saveFile);
   const updateOCRText = useMutation(api.files.updateOCRText);
@@ -82,10 +86,11 @@ export default function FileUpload({
     // Upload each file
     for (const uploadingFile of newUploadingFiles) {
       try {
-      // Generate authenticated upload URL
-      const uploadUrl = await generateUploadUrl({
-        clerkUserId: user.id
-      });
+        // Generate authenticated upload URL with file size check
+        const uploadUrl = await generateUploadUrl({
+          clerkUserId: user.id,
+          fileSize: uploadingFile.file.size,
+        });
 
         // Upload file to Convex storage
         const result = await fetch(uploadUrl, {
@@ -196,13 +201,28 @@ export default function FileUpload({
 
       } catch (error) {
         console.error('Upload error:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // Check if it's a storage limit error
+        if (errorMessage.includes('STORAGE_LIMIT_EXCEEDED')) {
+          trackUsage('1gb_of_file_storage', { action: 'storage_limit_reached', fileSize: uploadingFile.file.size });
+          setShowUpgradePrompt(true);
+
+          // Remove this file from the uploading list since it failed
+          setUploadingFiles(prev => prev.filter(f => f.id !== uploadingFile.id));
+
+          // Show user-friendly error
+          alert(errorMessage.split(':')[1] || 'Storage limit reached. Please upgrade to continue uploading files.');
+          break; // Stop processing more files
+        }
+
         setUploadingFiles(prev =>
           prev.map(f =>
             f.id === uploadingFile.id
               ? {
                   ...f,
                   status: 'error' as const,
-                  error: error instanceof Error ? error.message : 'Upload failed'
+                  error: errorMessage
                 }
               : f
           )
@@ -399,6 +419,13 @@ export default function FileUpload({
           ))}
         </div>
       )}
+
+      {/* Upgrade Prompt */}
+      <FeatureUpgradePrompt
+        featureId="unlimited_file_storage"
+        isOpen={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+      />
     </div>
   );
 }

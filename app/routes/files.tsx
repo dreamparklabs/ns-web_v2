@@ -10,6 +10,11 @@ import FileUpload from "../components/FileUpload";
 import FileUploadModal from "../components/FileUploadModal";
 import FileViewerModal from "../components/FileViewerModal";
 import ShareModal from "../components/ShareModal";
+import StorageQuotaBar from "../components/StorageQuotaBar";
+import SharedLinksQuota from "../components/SharedLinksQuota";
+import StorageUpgradeCard from "../components/StorageUpgradeCard";
+import FeatureUpgradePrompt from "../components/FeatureUpgradePrompt";
+import { useFeatureGate } from "../hooks/useFeatureGate";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -28,6 +33,8 @@ export default function Files() {
   const { globalTermId, isFilteringByTerm } = useGlobalTerm();
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showShareUpgradePrompt, setShowShareUpgradePrompt] = useState(false);
+  const { trackUsage } = useFeatureGate();
 
   // Check URL parameters for modal state
   const viewerFileId = searchParams.get('view-file') as Id<"files"> | null;
@@ -272,9 +279,9 @@ export default function Files() {
   }).length || 0;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 max-w-none mx-auto px-4 xl:px-6 2xl:px-8">
+    <div className="h-[calc(100vh-4rem)] flex flex-col max-w-none mx-auto px-4 xl:px-6 2xl:px-8 pt-4 xl:pt-6 2xl:pt-8">
       {/* Header */}
-      <div className="flex-shrink-0 pt-1 pb-2">
+      <div className="flex-shrink-0 pb-3 xl:pb-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl md:text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
@@ -306,75 +313,45 @@ export default function Files() {
 
 
       {/* Files Grid - Dashboard Style with Dynamic Heights */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-3 md:gap-4 xl:gap-5 2xl:gap-6 min-h-0">
-        {/* Row 1: File Stats */}
-        <div className="col-span-1 md:col-span-1 lg:col-span-3 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
-          <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
-            <div className="flex items-center justify-between h-full">
-              <div>
-                <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Files</p>
-                <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">{totalFiles}</p>
-              </div>
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-span-1 md:col-span-1 lg:col-span-3 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
-          <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
-            <div className="flex items-center justify-between h-full">
-              <div>
-                <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Storage Used</p>
-                <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">{formatFileSize(totalSize)}</p>
-              </div>
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                </svg>
+      <div className="flex-1 flex flex-col gap-4 xl:gap-5 2xl:gap-6 pb-4">
+        {/* Row 1: File Stats - Flex row that distributes space evenly */}
+        <div className="flex flex-col md:flex-row gap-3 md:gap-4 xl:gap-5 2xl:gap-6 flex-shrink-0" style={{ height: '120px' }}>
+          {/* Total Files Card */}
+          <div className="flex-1">
+            <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Files</p>
+                  <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">{totalFiles}</p>
+                </div>
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="col-span-1 md:col-span-1 lg:col-span-3 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
-          <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
-            <div className="flex items-center justify-between h-full">
-              <div>
-                <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Shared Files</p>
-                <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">0</p>
-              </div>
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                </svg>
-              </div>
-            </div>
+          {/* Storage Used Card */}
+          <div className="flex-1">
+            <StorageQuotaBar compact={true} />
           </div>
-        </div>
 
-        <div className="col-span-1 md:col-span-1 lg:col-span-3 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
-          <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
-            <div className="flex items-center justify-between h-full">
-              <div>
-                <p className="text-caption text-gray-600 dark:text-gray-400 uppercase tracking-wide">Recent Files</p>
-                <p className="text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white mt-1">{recentFiles}</p>
-              </div>
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
+          {/* Shared Links Card */}
+          <div className="flex-1">
+            <SharedLinksQuota compact={true} />
+          </div>
+
+          {/* Storage Upgrade Card - Only shows for Basic plan users, collapses when component returns null */}
+          <div className="flex-1 empty:hidden">
+            <StorageUpgradeCard />
           </div>
         </div>
 
         {/* Row 2: Filter Controls and File List */}
-        <div className="col-span-1 md:col-span-4 lg:col-span-12 h-[45vh] md:h-[50vh] lg:h-[45vh] xl:h-[48vh] 2xl:h-[50vh]">
-          <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden h-full flex flex-col">
+        <div className="flex-1">
+          <div className="bg-white dark:bg-gray-800 rounded-xl h-full flex flex-col">
             {/* Filter Header */}
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">

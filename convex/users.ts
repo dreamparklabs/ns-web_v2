@@ -63,6 +63,46 @@ export const getUserByClerkId = query({
   },
 });
 
+// Sync subscription data from Clerk to Convex
+export const syncSubscription = mutation({
+  args: {
+    clerkUserId: v.string(),
+    subscriptionPlan: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+    currentPeriodEnd: v.optional(v.float64()),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
+    accountStatus: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", args.clerkUserId))
+      .first();
+
+    if (!user) {
+      throw new Error(`User not found: ${args.clerkUserId}`);
+    }
+
+    // Update subscription fields
+    await ctx.db.patch(user._id, {
+      subscriptionPlan: args.subscriptionPlan,
+      subscriptionStatus: args.subscriptionStatus,
+      subscriptionId: args.subscriptionId,
+      stripeCustomerId: args.stripeCustomerId,
+      currentPeriodEnd: args.currentPeriodEnd,
+      cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+      accountStatus: args.accountStatus || 'active',
+      updatedAt: Date.now(),
+    });
+
+    console.log(`✅ Synced subscription for user ${args.clerkUserId}: ${args.subscriptionPlan}`);
+
+    return { success: true };
+  },
+});
+
 // Get progress data for dashboard
 export const getProgressData = query({
   args: {},

@@ -155,9 +155,9 @@ export default function Tasks() {
 
   return (
     <>
-      <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 max-w-none mx-auto px-4 xl:px-6 2xl:px-8">
+      <div className="h-[calc(100vh-4rem)] flex flex-col max-w-none mx-auto px-4 xl:px-6 2xl:px-8 pt-4 xl:pt-6 2xl:pt-8">
         {/* Header */}
-        <div className="flex-shrink-0 pt-1 pb-2">
+        <div className="flex-shrink-0 pb-3 xl:pb-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl md:text-2xl xl:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
@@ -180,9 +180,11 @@ export default function Tasks() {
         </div>
 
         {/* Assignment Grid - Dashboard Style with Dynamic Heights */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-3 md:gap-4 xl:gap-5 2xl:gap-6 min-h-0">
-          {/* Row 1: Assignment Stats */}
-          <div className="col-span-1 md:col-span-4 lg:col-span-4 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
+        <div className="flex-1 flex flex-col gap-4 xl:gap-5 2xl:gap-6 pb-4">
+          {/* Row 1: Assignment Stats - Flex row that distributes space evenly */}
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 xl:gap-5 2xl:gap-6 flex-shrink-0" style={{ height: '120px' }}>
+            {/* Total Assignments Card */}
+            <div className="flex-1">
             <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
               <div className="flex items-center justify-between h-full">
                 <div>
@@ -196,9 +198,10 @@ export default function Tasks() {
                 </div>
               </div>
             </div>
-          </div>
+            </div>
 
-          <div className="col-span-1 md:col-span-2 lg:col-span-4 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
+            {/* Completed Card */}
+            <div className="flex-1">
             <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
               <div className="flex items-center justify-between h-full">
                 <div>
@@ -212,9 +215,10 @@ export default function Tasks() {
                 </div>
               </div>
             </div>
-          </div>
+            </div>
 
-          <div className="col-span-1 md:col-span-2 lg:col-span-4 h-[19vh] md:h-[16vh] lg:h-[19vh] xl:h-[18vh] 2xl:h-[16vh]">
+            {/* Overdue Card */}
+            <div className="flex-1">
             <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-1.5 xl:px-4 xl:py-2 h-full">
               <div className="flex items-center justify-between h-full">
                 <div>
@@ -228,11 +232,12 @@ export default function Tasks() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Row 2: Filter Controls and Assignment List */}
-          <div className="col-span-1 md:col-span-4 lg:col-span-12 h-[45vh] md:h-[50vh] lg:h-[45vh] xl:h-[48vh] 2xl:h-[50vh]">
-            <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden h-full flex flex-col">
+          <div className="flex-1">
+            <div className="bg-white dark:bg-gray-800 rounded-xl h-full flex flex-col">
               {/* Filter Header */}
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <div className="flex items-center justify-between">
@@ -287,7 +292,7 @@ export default function Tasks() {
               </div>
 
               {/* Assignment List */}
-              <div className="flex-1 overflow-y-auto scrollbar-modern min-h-0">
+              <div className="flex-1 overflow-y-auto scrollbar-modern">
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredAssignments && filteredAssignments.length > 0 ? (
                     filteredAssignments.map((assignment, index) => (

@@ -109,33 +109,69 @@ export async function action({ request }: ActionFunctionArgs) {
 async function handleSubscriptionCreated(data: any) {
   console.log("Subscription created:", data);
   
-  // Update user metadata with subscription info
-  // This would typically involve updating your database
-  // For now, we'll just log the event
-  
-  // You might want to:
-  // 1. Update user's subscription status in your database
-  // 2. Send welcome email
-  // 3. Track the event in analytics
-  // 4. Update user's plan limits
+  try {
+    // Update user metadata with subscription info
+    await updateUserSubscriptionStatus(data.user_id, {
+      plan: data.plan_id,
+      status: 'active',
+      subscriptionId: data.subscription_id,
+      startDate: data.created_at,
+      currentPeriodEnd: data.current_period_end,
+      price: data.amount,
+      currency: data.currency,
+    });
+
+    // Track the event in analytics
+    await trackBillingEvent('subscription_created', data);
+    
+    console.log(`Subscription created for user ${data.user_id}: ${data.plan_id}`);
+  } catch (error) {
+    console.error('Failed to handle subscription created:', error);
+  }
 }
 
 async function handleSubscriptionUpdated(data: any) {
   console.log("Subscription updated:", data);
   
-  // Handle subscription changes like:
-  // - Plan upgrades/downgrades
-  // - Billing cycle changes
-  // - Feature changes
+  try {
+    // Update user metadata with new subscription info
+    await updateUserSubscriptionStatus(data.user_id, {
+      plan: data.plan_id,
+      status: data.status,
+      subscriptionId: data.subscription_id,
+      currentPeriodEnd: data.current_period_end,
+      price: data.amount,
+      currency: data.currency,
+    });
+
+    // Track the event in analytics
+    await trackBillingEvent('subscription_updated', data);
+    
+    console.log(`Subscription updated for user ${data.user_id}: ${data.plan_id}`);
+  } catch (error) {
+    console.error('Failed to handle subscription updated:', error);
+  }
 }
 
 async function handleSubscriptionDeleted(data: any) {
   console.log("Subscription deleted:", data);
   
-  // Handle subscription cancellation:
-  // - Downgrade user to free plan
-  // - Update access permissions
-  // - Send cancellation confirmation
+  try {
+    // Downgrade user to free plan
+    await updateUserSubscriptionStatus(data.user_id, {
+      plan: 'free',
+      status: 'canceled',
+      subscriptionId: null,
+      canceledAt: Date.now(),
+    });
+
+    // Track the event in analytics
+    await trackBillingEvent('subscription_deleted', data);
+    
+    console.log(`Subscription deleted for user ${data.user_id}`);
+  } catch (error) {
+    console.error('Failed to handle subscription deleted:', error);
+  }
 }
 
 async function handleSubscriptionActivated(data: any) {
@@ -195,10 +231,14 @@ async function handleTrialEnded(data: any) {
 async function handlePaymentSucceeded(data: any) {
   console.log("Payment succeeded:", data);
   
-  // Handle successful payment:
-  // - Update subscription status
-  // - Send payment confirmation
-  // - Track revenue in analytics
+  try {
+    // Track the successful payment in analytics
+    await trackBillingEvent('payment_succeeded', data);
+    
+    console.log(`Payment succeeded for user ${data.user_id}: $${data.amount / 100} ${data.currency}`);
+  } catch (error) {
+    console.error('Failed to handle payment succeeded:', error);
+  }
 }
 
 async function handlePaymentFailed(data: any) {
@@ -212,22 +252,28 @@ async function handlePaymentFailed(data: any) {
 
 // Helper function to update user subscription status
 async function updateUserSubscriptionStatus(userId: string, subscriptionData: any) {
-  // This would integrate with your user management system
-  // For Clerk, you might update user metadata:
-  
   try {
-    // Example of how you might update user metadata
-    // const { user } = await clerkClient.users.getUser(userId);
-    // await clerkClient.users.updateUser(userId, {
-    //   publicMetadata: {
-    //     ...user.publicMetadata,
-    //     subscription: subscriptionData
-    //   }
-    // });
+    // Import clerkClient dynamically to avoid issues with server-side rendering
+    const { clerkClient } = await import("@clerk/clerk-sdk-node");
+    
+    // Get the current user
+    const user = await clerkClient.users.getUser(userId);
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+
+    // Update user metadata with subscription info
+    await clerkClient.users.updateUser(userId, {
+      publicMetadata: {
+        ...user.publicMetadata,
+        subscription: subscriptionData
+      }
+    });
     
     console.log(`Updated subscription status for user ${userId}:`, subscriptionData);
   } catch (error) {
     console.error(`Failed to update subscription status for user ${userId}:`, error);
+    throw error;
   }
 }
 

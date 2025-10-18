@@ -1,10 +1,13 @@
 import type { Route } from "./+types/analytics";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useSearchParams } from "react-router";
 import { useGlobalTerm } from "../hooks/useGlobalTerm";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useFeatureGate } from "../hooks/useFeatureGate";
+import { useClerkBilling } from "../hooks/useClerkBilling";
+import { motion } from "framer-motion";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -17,6 +20,11 @@ export default function Analytics() {
   const { user } = useUser();
   const [searchParams, setSearchParams] = useSearchParams();
   const { globalTermId, isFilteringByTerm } = useGlobalTerm();
+  const { checkAccess, trackUsage } = useFeatureGate();
+  const { subscribeToPlan, isLoading: isBillingLoading } = useClerkBilling();
+
+  // Check if user has access to analytics
+  const analyticsAccess = checkAccess('academic_progress_analytics');
   
   // Get period from URL params, default to "week"
   const urlPeriod = searchParams.get("period");
@@ -37,13 +45,22 @@ export default function Analytics() {
     setSearchParams(newSearchParams);
   };
 
-  // Get user data for analytics
+  // Get user data for analytics (only if user has access)
   const userStats = useQuery(api.grades.getUserStats);
   const assignments = useQuery(
     api.assignments.getUserAssignments,
-    user?.id ? { clerkUserId: user.id } : "skip"
+    user?.id && analyticsAccess.hasAccess ? { clerkUserId: user.id } : "skip"
   );
-  const courseGrades = useQuery(api.grades.getCourseGrades, {});
+  const courseGrades = useQuery(api.grades.getCourseGrades, analyticsAccess.hasAccess ? {} : "skip");
+
+  // Track analytics page view
+  useEffect(() => {
+    if (analyticsAccess.hasAccess) {
+      trackUsage('academic_progress_analytics', { action: 'page_viewed' });
+    } else {
+      trackUsage('academic_progress_analytics', { action: 'access_attempted' });
+    }
+  }, [analyticsAccess.hasAccess, trackUsage]);
 
   // Calculate analytics data
   const calculateAnalytics = () => {
@@ -227,6 +244,15 @@ export default function Analytics() {
     </div>
   );
 
+  const handleUpgrade = async () => {
+    trackUsage('academic_progress_analytics', { action: 'upgrade_clicked' });
+    try {
+      await subscribeToPlan('northstar_pro', '/app/v2/analytics');
+    } catch (error) {
+      console.error('Failed to upgrade:', error);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 max-w-none mx-auto px-4 xl:px-6 2xl:px-8">
       {/* Header */}
@@ -241,7 +267,8 @@ export default function Analytics() {
                 </p>
               </div>
           
-              {/* Time Period Toggle */}
+              {/* Time Period Toggle - Only show if user has access */}
+              {analyticsAccess.hasAccess && (
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-full">
                 {validPeriods.map((period) => (
               <button
@@ -257,12 +284,102 @@ export default function Analytics() {
               </button>
             ))}
           </div>
+              )}
         </div>
       </div>
 
+      {/* Show upgrade prompt if no access */}
+      {!analyticsAccess.hasAccess ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex-1 flex items-center justify-center"
+        >
+          <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+            {/* Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
 
-          {/* Progress Content */}
-      {analytics ? (
+            {/* Content */}
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                Academic Progress Analytics
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Unlock powerful insights into your academic performance with Pro
+              </p>
+
+              {/* Features List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left mb-8">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Productivity Trends</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Track daily, weekly, and monthly patterns</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Grade Distribution</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Visualize your performance across courses</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Performance Insights</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Get AI-powered recommendations</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Completion Metrics</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Monitor assignment completion rates</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upgrade Button */}
+              <button
+                onClick={handleUpgrade}
+                disabled={isBillingLoading}
+                className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isBillingLoading ? 'Processing...' : 'Upgrade to Pro - $14.99/month'}
+              </button>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                Cancel anytime • Full access to all Pro features
+              </p>
+            </div>
+
+            {/* Additional info */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-center text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Also included in Pro:</span> Unlimited storage, unlimited dashboards, AI Study Buddy, and more
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      ) : analytics ? (
         <div className="flex-1 space-y-6 overflow-y-auto">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
