@@ -12,20 +12,6 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
 
   const plans = [
     {
-      id: "free",
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Perfect for getting started",
-      features: [
-        "1GB file storage",
-        "2 shared file links",
-        "Basic academic tracking",
-        "Email support"
-      ],
-      popular: false
-    },
-    {
       id: "northstar_basic",
       name: "Northstar Basic",
       price: "$9.99",
@@ -74,7 +60,7 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
           Choose Your Plan
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Select the plan that best fits your academic needs. You can always upgrade or downgrade later.
+          Choose your subscription plan to unlock all features. You can always upgrade or downgrade later.
         </p>
       </div>
 
