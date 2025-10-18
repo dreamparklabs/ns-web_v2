@@ -125,7 +125,7 @@ export default function SchoolInfoStep({ onNext, onBack, initialData, isLoading 
           
           {/* Dropdown */}
           {isSchoolDropdownOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {sortedAndFilteredSchools.length > 0 ? (
                 sortedAndFilteredSchools.map((sch) => (
                   <button
@@ -183,15 +183,15 @@ export default function SchoolInfoStep({ onNext, onBack, initialData, isLoading 
             required
           />
           {majorCategory && majorCategories?.find(cat => cat.name === majorCategory)?.commonMajors.length > 0 && (
-            <div className="mt-2">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Common majors in this category:</p>
-              <div className="flex flex-wrap gap-1">
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">Common majors in this category:</p>
+              <div className="flex flex-wrap gap-2">
                 {majorCategories.find(cat => cat.name === majorCategory)?.commonMajors.map((commonMajor, index) => (
                   <button
                     key={index}
                     type="button"
                     onClick={() => setMajor(commonMajor)}
-                    className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-3 py-2 rounded hover:bg-purple-200 dark:hover:bg-purple-800 min-h-[36px] flex items-center"
+                    className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-3 py-2 rounded-full hover:bg-purple-200 dark:hover:bg-purple-800 min-h-[32px] flex items-center transition-colors duration-200"
                   >
                     {commonMajor}
                   </button>

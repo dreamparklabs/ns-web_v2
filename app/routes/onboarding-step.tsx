@@ -369,8 +369,8 @@ export default function OnboardingStepPage() {
       </div>
 
       {/* Right Side - Form Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 lg:p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 overflow-y-auto">
+        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 lg:p-8 pt-8">
           {/* Step content */}
           {currentStep === 1 && (
             <DemographicsStep
