@@ -1,10 +1,11 @@
 import type { Route } from "./+types/classes";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useSearchParams, useLocation, useNavigate, Link } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useGlobalTerm } from "../hooks/useGlobalTerm";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -21,6 +22,11 @@ export default function Classes() {
   const location = useLocation();
   const navigate = useNavigate();
   const { globalTermId } = useGlobalTerm();
+
+  // State for dropdown menus
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [isGlobalMenuOpen, setIsGlobalMenuOpen] = useState(false);
+  const globalMenuRef = useRef<HTMLDivElement>(null);
 
   // Get filter from URL params, default to "all"
   const urlFilter = searchParams.get("filter");
@@ -91,6 +97,54 @@ export default function Classes() {
     navigate(`${location.pathname}?${newSearchParams.toString()}`);
   };
 
+  // Handle clicks outside dropdown menus
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (globalMenuRef.current && !globalMenuRef.current.contains(event.target as Node)) {
+        setIsGlobalMenuOpen(false);
+      }
+      // Close any open class menu if clicking outside
+      if (!(event.target as Element).closest('[data-menu-id]')) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Function to handle edit class
+  const handleEditClass = (courseId: Id<"courses">) => {
+    setOpenMenuId(null);
+    // TODO: Implement edit class functionality
+    console.log('Edit class:', courseId);
+  };
+
+  // Function to handle delete class
+  const handleDeleteClass = (courseId: Id<"courses">) => {
+    setOpenMenuId(null);
+    const confirmed = window.confirm('Are you sure you want to delete this class? This will also delete all assignments associated with it. This action cannot be undone.');
+    if (confirmed) {
+      // TODO: Implement delete class functionality
+      console.log('Delete class:', courseId);
+    }
+  };
+
+  // Function to handle global menu actions
+  const handleRecentlyDeleted = () => {
+    setIsGlobalMenuOpen(false);
+    // TODO: Implement recently deleted functionality
+    console.log('Show recently deleted classes');
+  };
+
+  const handleGlobalDelete = () => {
+    setIsGlobalMenuOpen(false);
+    // TODO: Implement bulk delete functionality
+    console.log('Bulk delete classes');
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 max-w-none mx-auto px-4 xl:px-6 2xl:px-8">
         {/* Header */}
@@ -104,15 +158,52 @@ export default function Classes() {
                 Manage your enrolled courses and class schedules.
               </p>
             </div>
-            <button
-              onClick={openAddClassModal}
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-semibold hover:bg-purple-700 hover:shadow-md transition-all duration-200 transform hover:scale-105"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span>Add Class</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={openAddClassModal}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-semibold hover:bg-purple-700 hover:shadow-md transition-all duration-200 transform hover:scale-105"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Add Class</span>
+              </button>
+              <div className="relative" ref={globalMenuRef}>
+                <button
+                  onClick={() => setIsGlobalMenuOpen(!isGlobalMenuOpen)}
+                  className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  aria-label="More options"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+
+                 {/* Global Dropdown Menu */}
+                 {isGlobalMenuOpen && (
+                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                     <button
+                       onClick={handleRecentlyDeleted}
+                       className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                     >
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                       </svg>
+                       <span>Recently Deleted</span>
+                     </button>
+                     <button
+                       onClick={handleGlobalDelete}
+                       className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                     >
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                       </svg>
+                       <span>Bulk Delete</span>
+                     </button>
+                   </div>
+                 )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -265,21 +356,71 @@ export default function Classes() {
                         : 'text-gray-500 dark:text-gray-400';
 
                       return (
-                        <Link
+                        <div
                           key={course._id}
-                          to={`/app/v2/classes/${course._id}`}
-                          className="block bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200 transform hover:scale-[1.02]"
+                          className="block bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200 transform hover:scale-[1.02] relative"
                         >
                           <div className={`h-20 bg-gradient-to-r ${gradient}`}></div>
                           <div className="p-4">
                             <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{course.title}</h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{course.code}</p>
+                              <Link
+                                to={`/app/v2/classes/${course._id}`}
+                                className="flex-1"
+                              >
+                                <div>
+                                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">{course.title}</h3>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">{course.code}</p>
+                                </div>
+                              </Link>
+                              <div className="flex items-center space-x-2">
+                                <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full">
+                                  {course.creditHours} Credit{course.creditHours !== 1 ? 's' : ''}
+                                </span>
+                                <div className="relative" data-menu-id={course._id}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setOpenMenuId(openMenuId === course._id ? null : course._id);
+                                    }}
+                                    className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                                    aria-label="More options"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                    </svg>
+                                  </button>
+
+                                  {/* Class Dropdown Menu */}
+                                  {openMenuId === course._id && (
+                                    <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          handleEditClass(course._id);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        <span>Edit</span>
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          handleDeleteClass(course._id);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        <span>Delete</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full">
-                                {course.creditHours} Credit{course.creditHours !== 1 ? 's' : ''}
-                              </span>
                             </div>
 
                             <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -332,7 +473,7 @@ export default function Classes() {
                               </div>
                             </div>
                           </div>
-                        </Link>
+                        </div>
                       );
                     })}
                   </div>
