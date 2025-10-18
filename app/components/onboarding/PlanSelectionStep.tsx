@@ -24,7 +24,7 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
         "Basic analytics",
         "Priority support"
       ],
-      popular: true
+      popular: false
     },
     {
       id: "northstar_pro",
@@ -40,7 +40,7 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
         "Academic progress insights",
         "Priority support"
       ],
-      popular: false
+      popular: true
     }
   ];
 
