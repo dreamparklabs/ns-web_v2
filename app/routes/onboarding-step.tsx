@@ -397,7 +397,15 @@ export default function OnboardingStepPage() {
     setIsLoading(true);
 
     try {
-      if (!convexUser) return;
+      if (!convexUser) {
+        console.error("❌ No Convex user found when trying to save plan selection");
+        throw new Error("User data not available. Please refresh the page and try again.");
+      }
+
+      console.log("💾 Saving plan selection to Convex:", {
+        clerkUserId: convexUser.clerkUserId,
+        selectedPlan: data.selectedPlan
+      });
 
       // Save plan selection to Convex
       await updateUserSubscription({
@@ -406,6 +414,8 @@ export default function OnboardingStepPage() {
         subscriptionStatus: 'pending',
         accountStatus: 'pending_payment',
       });
+
+      console.log("✅ Plan selection saved successfully");
 
       // DON'T complete the guided tour yet - wait until after Stripe checkout
       // The tour will be completed when the user returns from successful checkout
@@ -417,8 +427,10 @@ export default function OnboardingStepPage() {
       // The PlanSelectionStep component will handle the Stripe checkout redirect
       // User will be redirected to Stripe immediately after this completes
     } catch (error) {
-      console.error("Failed to save plan selection:", error);
-      alert("There was an issue saving your plan selection. Please try again or contact support if the problem persists.");
+      console.error("❌ Failed to save plan selection:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`There was an issue saving your plan selection: ${errorMessage}. Please try again or contact support if the problem persists.`);
+      throw error; // Re-throw so PlanSelectionStep knows it failed
     } finally {
       setIsLoading(false);
     }
