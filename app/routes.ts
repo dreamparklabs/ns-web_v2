@@ -31,6 +31,9 @@ export default [
   route("api/billing/sync-subscription", "routes/api.billing.sync-subscription.tsx"),
   route("api/billing/clear-subscription", "routes/api.billing.clear-subscription.tsx"),
 
+  // Webhook routes
+  route("api/webhooks/stripe", "routes/api.webhooks.stripe.tsx"),
+
   // LTI (Learning Tools Interoperability) routes for universal D2L access
   route("api/lti/launch", "routes/api.lti.launch.tsx"),
   route("api/lti/config.xml", "routes/api.lti.config.tsx"),

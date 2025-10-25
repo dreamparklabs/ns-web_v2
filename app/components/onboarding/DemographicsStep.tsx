@@ -4,14 +4,20 @@ import { api } from "../../../convex/_generated/api";
 
 interface DemographicsStepProps {
   onNext: (data: { birthday: string; ethnicity: string; gender: string }) => void;
+  onChange?: (data: { birthday: string; ethnicity: string; gender: string }) => void;
   initialData: { birthday: string; ethnicity: string; gender: string };
   isLoading: boolean;
 }
 
-export default function DemographicsStep({ onNext, initialData, isLoading }: DemographicsStepProps) {
+export default function DemographicsStep({ onNext, onChange, initialData, isLoading }: DemographicsStepProps) {
   const [birthday, setBirthday] = useState(initialData.birthday);
   const [ethnicity, setEthnicity] = useState(initialData.ethnicity);
   const [gender, setGender] = useState(initialData.gender);
+
+  // Sync form data with parent component in real-time
+  useEffect(() => {
+    onChange?.({ birthday, ethnicity, gender });
+  }, [birthday, ethnicity, gender, onChange]);
 
   const ethnicities = useQuery(api.onboarding.getEthnicities);
 

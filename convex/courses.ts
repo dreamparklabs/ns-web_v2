@@ -204,7 +204,18 @@ export const createCourse = mutation({
     meetingEnd: v.optional(v.string()),
     room: v.optional(v.string()),
     building: v.optional(v.string()),
-    termId: v.id("terms")
+    termId: v.id("terms"),
+    gradingScheme: v.optional(v.object({
+      mode: v.optional(v.string()),
+      categories: v.array(
+        v.object({
+          name: v.string(),
+          weight: v.number(),
+          count: v.number(),
+          dropLowest: v.optional(v.number()),
+        }),
+      ),
+    })),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -236,7 +247,77 @@ export const createCourse = mutation({
       meetingEnd: args.meetingEnd,
       room: args.room,
       building: args.building,
-      termId: args.termId
+      termId: args.termId,
+      gradingScheme: args.gradingScheme
+    });
+  },
+});
+
+// Update an existing course
+export const updateCourse = mutation({
+  args: {
+    courseId: v.id("courses"),
+    title: v.string(),
+    code: v.string(),
+    creditHours: v.number(),
+    instructor: v.string(),
+    deliveryFormat: v.optional(v.string()),
+    deliveryMode: v.optional(v.string()),
+    meetingDays: v.optional(v.array(v.string())),
+    meetingStart: v.optional(v.string()),
+    meetingEnd: v.optional(v.string()),
+    room: v.optional(v.string()),
+    building: v.optional(v.string()),
+    termId: v.id("terms"),
+    gradingScheme: v.optional(v.object({
+      mode: v.optional(v.string()),
+      categories: v.array(
+        v.object({
+          name: v.string(),
+          weight: v.number(),
+          count: v.number(),
+          dropLowest: v.optional(v.number()),
+        }),
+      ),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("clerkUserId"), identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify that the course belongs to the user
+    const course = await ctx.db.get(args.courseId);
+    if (!course || course.userId !== user._id) {
+      throw new Error("Course not found or access denied");
+    }
+
+    await ctx.db.patch(args.courseId, {
+      title: args.title,
+      code: args.code,
+      lc_code: args.code.toLowerCase(),
+      lc_title: args.title.toLowerCase(),
+      creditHours: args.creditHours,
+      instructor: args.instructor,
+      deliveryFormat: args.deliveryFormat || "in-person",
+      deliveryMode: args.deliveryMode,
+      meetingDays: args.meetingDays,
+      meetingStart: args.meetingStart,
+      meetingEnd: args.meetingEnd,
+      room: args.room,
+      building: args.building,
+      termId: args.termId,
+      gradingScheme: args.gradingScheme
     });
   },
 });

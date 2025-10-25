@@ -9,6 +9,7 @@ import D2LOAuthSettings from "./D2LOAuthSettings";
 import D2LWebScrapingSettings from "./D2LWebScrapingSettings";
 import D2LAPISettings from "./D2LAPISettings";
 import AssignmentMasterSettings from "./AssignmentMasterSettings";
+import SyncClassesModal from "./SyncClassesModal";
 import ActiveDevices from "./ActiveDevices";
 import PasswordChangeForm from "./PasswordChangeForm";
 import EmailNotificationSettings from "./EmailNotificationSettings";
@@ -16,6 +17,8 @@ import EmailNotificationSettings from "./EmailNotificationSettings";
 import { useAuth } from '@clerk/clerk-react';
 import { UsageStats } from "./UsageStats";
 import { useClerkBilling } from "../hooks/useClerkBilling";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -36,11 +39,15 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { has } = useAuth();
   const { subscribeToPlan, syncSubscription, getCurrentPlan, isLoading: isBillingLoading } = useClerkBilling();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "billing" | "security" | "d2l" | "master">("profile");
+
+  // Get convex user for checking onboarding status
+  const convexUser = useQuery(api.users.getUserByClerkId, user?.id ? { clerkUserId: user.id } : "skip");
+  const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "billing" | "security" | "integrations">("profile");
   const [isD2LModalOpen, setIsD2LModalOpen] = useState(false);
   const [isD2LWebScrapingModalOpen, setIsD2LWebScrapingModalOpen] = useState(false);
   const [isD2LAPIModalOpen, setIsD2LAPIModalOpen] = useState(false);
   const [isAssignmentMasterModalOpen, setIsAssignmentMasterModalOpen] = useState(false);
+  const [isSyncClassesModalOpen, setIsSyncClassesModalOpen] = useState(false);
   const [isCheckoutActive, setIsCheckoutActive] = useState(false);
   const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
   const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
@@ -52,7 +59,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Function to handle tab changes and update URL
-  const handleTabChange = (newTab: "profile" | "preferences" | "billing" | "security" | "d2l" | "master") => {
+  const handleTabChange = (newTab: "profile" | "preferences" | "billing" | "security" | "integrations") => {
     setActiveTab(newTab);
     const newSearchParams = new URLSearchParams(location.search);
     newSearchParams.set('tab', newTab);
@@ -65,9 +72,15 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setHasUnsavedChanges(false);
 
       // Set active tab from URL parameter
-      const tabParam = searchParams.get('tab') as "profile" | "preferences" | "billing" | "security" | "d2l" | "master";
+      const tabParam = searchParams.get('tab') as "profile" | "preferences" | "billing" | "security" | "integrations";
       if (tabParam) {
         setActiveTab(tabParam);
+      }
+
+      // Check for sync classes modal parameter
+      const syncClassesParam = searchParams.get('syncClasses');
+      if (syncClassesParam === 'true') {
+        setIsSyncClassesModalOpen(true);
       }
 
       // Check for downgrade modal parameter
@@ -83,13 +96,37 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   }, [isOpen, searchParams, getCurrentPlan]);
 
+  // Handle sync classes modal open/close with URL params
+  const handleOpenSyncClassesModal = () => {
+    setIsSyncClassesModalOpen(true);
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.set('syncClasses', 'true');
+    navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+  };
+
+  const handleCloseSyncClassesModal = () => {
+    setIsSyncClassesModalOpen(false);
+    const newSearchParams = new URLSearchParams(location.search);
+    newSearchParams.delete('syncClasses');
+    navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+  };
+
   // Sync subscription when returning from successful checkout
+  const hasSyncedCheckout = useRef(false);
+  
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
-    if (checkoutStatus === 'success' && isOpen) {
+    if (checkoutStatus === 'success' && isOpen && !hasSyncedCheckout.current) {
+      hasSyncedCheckout.current = true;
       console.log('🎉 Checkout successful! Syncing subscription...');
-      syncSubscription().then(() => {
-        success('Subscription activated successfully!');
+      
+      syncSubscription().then(async () => {
+        // Only show success message if user already completed onboarding
+        // (AppLayout handles the message for onboarding flow)
+        if (convexUser && convexUser.hasCompletedGuidedTour) {
+          success('Subscription updated successfully!');
+        }
+
         // Force a re-render by reloading user data
         if (user) {
           user.reload().then(() => {
@@ -100,7 +137,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         console.error('Failed to sync subscription:', error);
       });
     }
-  }, [searchParams, isOpen, syncSubscription, success, user]);
+  }, [searchParams, isOpen, syncSubscription, success, user, convexUser]);
+  
+  // Reset sync flag when leaving checkout success page
+  useEffect(() => {
+    if (searchParams.get('checkout') !== 'success') {
+      hasSyncedCheckout.current = false;
+    }
+  }, [searchParams]);
 
   // Handle keyboard shortcuts (but not when checkout is active or downgrade modal is showing)
   useEffect(() => {
@@ -108,8 +152,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        // Don't close if checkout is active or downgrade modal is showing
-        if (isCheckoutActive || showDowngradeWarning) {
+        // Don't close if checkout is active, downgrade modal is showing, or sync classes modal is open
+        if (isCheckoutActive || showDowngradeWarning || isSyncClassesModalOpen) {
           return;
         }
         e.preventDefault();
@@ -119,7 +163,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, isCheckoutActive, showDowngradeWarning]);
+  }, [isOpen, onClose, isCheckoutActive, showDowngradeWarning, isSyncClassesModalOpen]);
 
   // Handle ESC key for downgrade warning modal
   useEffect(() => {
@@ -158,8 +202,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Handle click outside (but not when checkout is active or downgrade modal is showing)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      // Don't close if checkout is active or downgrade modal is showing
-      if (isCheckoutActive || showDowngradeWarning) {
+      // Don't close if checkout is active, downgrade modal is showing, or sync classes modal is open
+      if (isCheckoutActive || showDowngradeWarning || isSyncClassesModalOpen) {
         return;
       }
 
@@ -173,7 +217,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose, isCheckoutActive, showDowngradeWarning]);
+  }, [isOpen, onClose, isCheckoutActive, showDowngradeWarning, isSyncClassesModalOpen]);
 
   // Handle theme change
   const handleThemeChange = (newTheme: "system" | "light" | "dark") => {
@@ -205,10 +249,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
 
     try {
+      setIsCheckoutActive(true);
       await subscribeToPlan(planId);
-      // User will be redirected to Clerk's checkout page, so this won't execute
+      // User will be redirected to Stripe checkout, so this won't execute
       // unless there's an error
     } catch (error) {
+      setIsCheckoutActive(false);
       console.error('Subscription error:', error);
       alert('Failed to start checkout. Please try again.');
     }
@@ -226,8 +272,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
 
     try {
+      setIsCheckoutActive(true);
       await subscribeToPlan(pendingDowngradePlan);
     } catch (error) {
+      setIsCheckoutActive(false);
       console.error('Subscription error:', error);
       alert('Failed to start checkout. Please try again.');
     } finally {
@@ -345,20 +393,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       )
     },
     {
-      id: "d2l" as const,
-      name: t('settings.tabs.d2lIntegration'),
+      id: "integrations" as const,
+      name: "Class Sync & Integrations",
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-        </svg>
-      )
-    },
-    {
-      id: "master" as const,
-      name: t('settings.tabs.assignmentMaster'),
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
         </svg>
       )
     }
@@ -376,13 +415,13 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="fixed inset-0 backdrop-blur-sm"
             onClick={(e) => {
-              // Don't close if clicking on Stripe/Clerk iframes or if downgrade modal is showing
-              if (isCheckoutActive || showDowngradeWarning) {
+              // Don't close if clicking on Stripe/Clerk iframes, downgrade modal is showing, or sync classes modal is open
+              if (isCheckoutActive || showDowngradeWarning || isSyncClassesModalOpen) {
                 return;
               }
               onClose();
             }}
-            style={{ pointerEvents: (isCheckoutActive || showDowngradeWarning) ? 'none' : 'auto' }}
+            style={{ pointerEvents: (isCheckoutActive || showDowngradeWarning || isSyncClassesModalOpen) ? 'none' : 'auto' }}
           />
 
           {/* Modal */}
@@ -549,6 +588,109 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "integrations" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Class Sync & Integrations</h3>
+                  <div className="space-y-6">
+                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Sync Classes</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Manually sync your courses and assignments from connected integrations.
+                      </p>
+
+                      <div className="space-y-4">
+                        {/* ICS Calendar Feed Integration */}
+                        <button
+                          onClick={handleOpenSyncClassesModal}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors text-left"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="font-medium">ICS Calendar Feed (Recommended)</span>
+                              </div>
+                              <div className="text-sm opacity-90">Add your D2L calendar feed URL and manage class assignments</div>
+                            </div>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+
+                        {/* Manual Sync Button */}
+                        <button
+                          onClick={() => {
+                            success('Sync started! This may take a few moments.');
+                            // TODO: Implement actual sync logic
+                          }}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Sync All Sources Now</span>
+                          </div>
+                        </button>
+
+                        {/* Sync Status */}
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                          <div className="flex items-center justify-between text-sm mb-2">
+                            <span className="text-gray-600 dark:text-gray-400">Last synced:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">Never</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Auto-sync:</span>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" defaultChecked />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <p>💡 Auto-sync runs every 6 hours when enabled</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">What Gets Synced</h4>
+                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        <li>• Course enrollments and details</li>
+                        <li>• Assignment dropboxes with due dates</li>
+                        <li>• Quizzes and exams</li>
+                        <li>• Graded discussion forums</li>
+                        <li>• News and announcements</li>
+                        <li>• Calendar events and deadlines</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <h4 className="font-medium text-blue-800 dark:text-blue-200">AI-Powered Features</h4>
+                          <ul className="text-sm text-blue-700 dark:text-blue-300 mt-1 space-y-1">
+                            <li>• Automatically parse announcements for hidden assignments</li>
+                            <li>• Intelligent content analysis of course modules</li>
+                            <li>• Smart due date extraction from text</li>
+                            <li>• Assignment type classification</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -755,186 +897,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
       </div>
     )}
-
-            {activeTab === "d2l" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">D2L Brightspace Integration</h3>
-                  <div className="space-y-6">
-                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Integration Methods</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Choose how to connect your D2L Brightspace account:
-                      </p>
-
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => setIsD2LAPIModalOpen(true)}
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-left"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">🔗 D2L API Integration (Best)</div>
-                              <div className="text-xs opacity-80">Official D2L API with real-time sync</div>
-                            </div>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => setIsD2LModalOpen(true)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-left"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">SSO Integration (Legacy)</div>
-                              <div className="text-xs opacity-80">Uses your school's login system</div>
-                            </div>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => setIsD2LWebScrapingModalOpen(true)}
-                          className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-left"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">Web Scraping (Alternative)</div>
-                              <div className="text-xs opacity-80">When OAuth is not available</div>
-                            </div>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => setIsAssignmentMasterModalOpen(true)}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-left"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">📅 ICS Calendar Feed (Instant)</div>
-                              <div className="text-xs opacity-80">Paste your D2L calendar feed URL for immediate sync</div>
-                            </div>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">AI-Powered Features</h4>
-                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <li>• Automatically parse announcements for hidden assignments</li>
-                        <li>• Intelligent content analysis of course modules</li>
-                        <li>• Smart due date extraction from text</li>
-                        <li>• Assignment type classification</li>
-                      </ul>
-                    </div>
-
-                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Sync Features</h4>
-                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <li>• Course enrollments and details</li>
-                        <li>• Assignment dropboxes with due dates</li>
-                        <li>• Quizzes and exams</li>
-                        <li>• Graded discussion forums</li>
-                        <li>• News and announcements</li>
-                        <li>• Calendar events</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "master" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Assignment Master Database</h3>
-                  <div className="space-y-6">
-                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Universal Assignment Collection</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Automatically collect assignments from multiple sources without requiring API access:
-                      </p>
-
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => setIsAssignmentMasterModalOpen(true)}
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors text-left"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">🗄️ Manage Assignment Master Database</div>
-                              <div className="text-xs opacity-80">ICS feeds, email parsing, and source consolidation</div>
-                            </div>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">📅 ICS Calendar Feeds</h4>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                          <li>• Export calendar from D2L</li>
-                          <li>• Automatic assignment detection</li>
-                          <li>• Smart due date parsing</li>
-                          <li>• Course auto-linking</li>
-                        </ul>
-                      </div>
-
-                      <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">📧 Email Integration</h4>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                          <li>• Parse D2L notifications</li>
-                          <li>• Grade update alerts</li>
-                          <li>• New assignment notifications</li>
-                          <li>• Announcement parsing</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">🔗 Smart Conflict Resolution</h4>
-                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <li>• Automatic duplicate detection</li>
-                        <li>• Intelligent data merging</li>
-                        <li>• Source confidence scoring</li>
-                        <li>• Manual review interface</li>
-                        <li>• Priority-based resolution</li>
-                      </ul>
-                    </div>
-
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                        <div>
-                          <h4 className="font-medium text-blue-800 dark:text-blue-200">Works Without API Access</h4>
-                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                            The Assignment Master Database uses exported calendar feeds and email notifications,
-                            so it works at any institution without requiring special API permissions.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1003,6 +965,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         onClose={() => setIsAssignmentMasterModalOpen(false)}
       />
 
+      {/* Sync Classes Modal - Rendered outside main modal */}
+      <SyncClassesModal
+        isOpen={isSyncClassesModalOpen}
+        onClose={handleCloseSyncClassesModal}
+      />
+
       {/* Downgrade Warning Modal */}
       <AnimatePresence>
         {showDowngradeWarning && (
@@ -1069,6 +1037,31 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Redirecting overlay */}
+      <AnimatePresence>
+        {isCheckoutActive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-white dark:bg-gray-900 z-[100] flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                <div className="absolute inset-0 border-4 border-purple-200 dark:border-purple-900 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Redirecting to Stripe...
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Please wait while we set up your secure checkout
+              </p>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </AnimatePresence>

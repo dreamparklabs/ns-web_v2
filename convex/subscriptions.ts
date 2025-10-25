@@ -29,7 +29,7 @@ export const updateUserSubscription = mutation({
 
     // Build update object with only defined values
     const updateData: any = {
-      subscriptionPlan: args.subscriptionPlan,
+      subscriptionPlan: args.subscriptionPlan || 'free_user', // Default to free_user instead of null
       subscriptionStatus: args.subscriptionStatus,
       updatedAt: Date.now(),
     };

@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useMutation, useQuery } from "convex/react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useClerkBilling } from "../hooks/useClerkBilling";
 import { api } from "../../convex/_generated/api";
 import DemographicsStep from "../components/onboarding/DemographicsStep";
 import SchoolInfoStep from "../components/onboarding/SchoolInfoStep";
 import TermSetupStep from "../components/onboarding/TermSetupStep";
 import PlanSelectionStep from "../components/onboarding/PlanSelectionStep";
+import CompletionStep from "../components/onboarding/CompletionStep";
 import type { Route } from "./+types/onboarding-step";
 
 export function meta({}: Route.MetaArgs) {
@@ -20,14 +22,17 @@ export default function OnboardingStepPage() {
   const { user, isLoaded } = useUser();
   const navigate = useNavigate();
   const { step } = useParams();
+  const [searchParams] = useSearchParams();
+  const { syncSubscription } = useClerkBilling();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const hasSyncedSubscription = useRef(false);
 
   // Parse step from URL
   const currentStep = parseInt(step || "1", 10);
-  const validSteps = [1, 2, 3, 4];
+  const validSteps = [1, 2, 3, 4, 5];
   
   // Redirect to step 1 if invalid step
   useEffect(() => {
@@ -39,6 +44,12 @@ export default function OnboardingStepPage() {
   // Get user data from Convex
   const convexUser = useQuery(
     api.users.getUserByClerkId,
+    user?.id ? { clerkUserId: user.id } : "skip"
+  );
+
+  // Get user's terms to check if step 3 is completed
+  const userTerms = useQuery(
+    api.terms.getUserTermsByClerkId,
     user?.id ? { clerkUserId: user.id } : "skip"
   );
 
@@ -70,12 +81,90 @@ export default function OnboardingStepPage() {
     createConvexUser();
   }, [isLoaded, user, convexUser, createUser, isCreatingUser]);
 
-  // Redirect users who have already completed ALL onboarding steps
+  // Sync subscription from Stripe when returning from checkout on step 5
   useEffect(() => {
-    if (convexUser && convexUser.hasCompletedDemographics && convexUser.hasCompletedGuidedTour) {
-      navigate("/app/v2/dashboard", { replace: true });
+    const checkoutStatus = searchParams.get('checkout');
+    if (currentStep === 5 && checkoutStatus === 'success' && user && !hasSyncedSubscription.current) {
+      hasSyncedSubscription.current = true;
+      console.log('🎉 Onboarding Step 5: Checkout successful! Syncing subscription from Stripe...');
+
+      syncSubscription().then(async () => {
+        console.log('✅ Onboarding Step 5: Subscription synced from Stripe');
+
+        // Reload user to get updated metadata
+        await user.reload();
+        console.log('✅ Onboarding Step 5: User reloaded with new subscription data');
+      }).catch((error) => {
+        console.error('❌ Onboarding Step 5: Failed to sync subscription:', error);
+      });
     }
-  }, [convexUser, navigate]);
+  }, [currentStep, searchParams, user, syncSubscription]);
+
+  // Check if step is completed based on user data
+  const isStep1Completed = (user: any) => {
+    return user?.birthday && user?.ethnicity && user?.gender;
+  };
+
+  const isStep2Completed = (user: any) => {
+    return user?.school && user?.majorCategory && user?.major && user?.currentYear;
+  };
+
+  const isStep3Completed = (terms: any[]) => {
+    return terms && terms.length > 0;
+  };
+
+  // Validate step access and redirect if necessary
+  useEffect(() => {
+    if (!convexUser) return;
+
+    // If user has completed ALL onboarding, redirect to dashboard
+    if (convexUser.hasCompletedDemographics && convexUser.hasCompletedGuidedTour) {
+      navigate("/app/v2/dashboard", { replace: true });
+      return;
+    }
+
+    // Validate step access based on previous step completion
+    if (currentStep === 2 && !isStep1Completed(convexUser)) {
+      // Can't access step 2 without completing step 1
+      navigate("/onboarding/step/1", { replace: true });
+      return;
+    }
+
+    if (currentStep === 3 && (!isStep1Completed(convexUser) || !isStep2Completed(convexUser))) {
+      // Can't access step 3 without completing steps 1 and 2
+      if (!isStep1Completed(convexUser)) {
+        navigate("/onboarding/step/1", { replace: true });
+      } else {
+        navigate("/onboarding/step/2", { replace: true });
+      }
+      return;
+    }
+
+    if (currentStep === 4 && (!isStep1Completed(convexUser) || !isStep2Completed(convexUser) || !isStep3Completed(userTerms))) {
+      // Can't access step 4 without completing all previous steps
+      if (!isStep1Completed(convexUser)) {
+        navigate("/onboarding/step/1", { replace: true });
+      } else if (!isStep2Completed(convexUser)) {
+        navigate("/onboarding/step/2", { replace: true });
+      } else if (!isStep3Completed(userTerms)) {
+        navigate("/onboarding/step/3", { replace: true });
+      }
+      return;
+    }
+
+    // Step 5 (completion) is only accessible after completing checkout
+    // The Stripe redirect will include checkout=success parameter
+    if (currentStep === 5) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const checkoutSuccess = urlParams.get('checkout') === 'success';
+      
+      // If no checkout success, redirect to step 4
+      if (!checkoutSuccess) {
+        navigate("/onboarding/step/4", { replace: true });
+        return;
+      }
+    }
+  }, [convexUser, userTerms, currentStep, navigate]);
 
   // Set a timeout for loading state
   useEffect(() => {
@@ -118,30 +207,118 @@ export default function OnboardingStepPage() {
   const completeGuidedTour = useMutation(api.users.completeGuidedTour);
   const updateUserSubscription = useMutation(api.subscriptions.updateUserSubscription);
 
-  // Step data
-  const [demographicsData, setDemographicsData] = useState({
-    birthday: "",
-    ethnicity: "",
-    gender: "",
+  // Load initial data from localStorage or use defaults
+  const loadFromLocalStorage = (key: string, defaultValue: any) => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : defaultValue;
+    } catch (error) {
+      console.error(`Error loading ${key} from localStorage:`, error);
+      return defaultValue;
+    }
+  };
+
+  // Step data with Convex data or localStorage fallback
+  const [demographicsData, setDemographicsData] = useState(() => {
+    if (convexUser?.birthday && convexUser?.ethnicity && convexUser?.gender) {
+      return {
+        birthday: new Date(convexUser.birthday).toISOString().split('T')[0],
+        ethnicity: convexUser.ethnicity,
+        gender: convexUser.gender,
+      };
+    }
+    return loadFromLocalStorage('onboarding_demographics', {
+      birthday: "",
+      ethnicity: "",
+      gender: "",
+    });
   });
 
-  const [schoolData, setSchoolData] = useState({
-    school: "",
-    majorCategory: "",
-    major: "",
-    minor: "",
-    currentYear: "",
+  const [schoolData, setSchoolData] = useState(() => {
+    if (convexUser?.school && convexUser?.majorCategory && convexUser?.major) {
+      return {
+        school: convexUser.school,
+        majorCategory: convexUser.majorCategory,
+        major: convexUser.major,
+        minor: convexUser.minor || "",
+        currentYear: convexUser.currentYear,
+      };
+    }
+    return loadFromLocalStorage('onboarding_school', {
+      school: "",
+      majorCategory: "",
+      major: "",
+      minor: "",
+      currentYear: "",
+    });
   });
 
-  const [termData, setTermData] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
+  const [termData, setTermData] = useState(() => {
+    if (userTerms && userTerms.length > 0) {
+      const latestTerm = userTerms[0]; // Assuming terms are sorted by date
+      return {
+        name: latestTerm.name,
+        startDate: new Date(latestTerm.startDate).toISOString().split('T')[0],
+        endDate: new Date(latestTerm.endDate).toISOString().split('T')[0],
+      };
+    }
+    return loadFromLocalStorage('onboarding_term', {
+      name: "",
+      startDate: "",
+      endDate: "",
+    });
   });
 
-  const [planData, setPlanData] = useState({
-    selectedPlan: "",
-  });
+  const [planData, setPlanData] = useState(() =>
+    loadFromLocalStorage('onboarding_plan', {
+      selectedPlan: "",
+    })
+  );
+
+  // Update state when Convex data changes
+  useEffect(() => {
+    if (convexUser?.birthday && convexUser?.ethnicity && convexUser?.gender) {
+      setDemographicsData({
+        birthday: new Date(convexUser.birthday).toISOString().split('T')[0],
+        ethnicity: convexUser.ethnicity,
+        gender: convexUser.gender,
+      });
+    }
+  }, [convexUser?.birthday, convexUser?.ethnicity, convexUser?.gender]);
+
+  useEffect(() => {
+    if (convexUser?.school && convexUser?.majorCategory && convexUser?.major) {
+      setSchoolData({
+        school: convexUser.school,
+        majorCategory: convexUser.majorCategory,
+        major: convexUser.major,
+        minor: convexUser.minor || "",
+        currentYear: convexUser.currentYear,
+      });
+    }
+  }, [convexUser?.school, convexUser?.majorCategory, convexUser?.major, convexUser?.minor, convexUser?.currentYear]);
+
+  useEffect(() => {
+    if (userTerms && userTerms.length > 0) {
+      const latestTerm = userTerms[0];
+      setTermData({
+        name: latestTerm.name,
+        startDate: new Date(latestTerm.startDate).toISOString().split('T')[0],
+        endDate: new Date(latestTerm.endDate).toISOString().split('T')[0],
+      });
+    }
+  }, [userTerms]);
+
+  // Save to localStorage as backup
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboarding_demographics', JSON.stringify(demographicsData));
+      localStorage.setItem('onboarding_school', JSON.stringify(schoolData));
+      localStorage.setItem('onboarding_term', JSON.stringify(termData));
+      localStorage.setItem('onboarding_plan', JSON.stringify(planData));
+    }
+  }, [demographicsData, schoolData, termData, planData]);
 
   const handleDemographicsNext = async (data: typeof demographicsData) => {
     if (!convexUser?._id) return;
@@ -216,12 +393,13 @@ export default function OnboardingStepPage() {
     }
   };
 
-  const handlePlanSelectionComplete = async (data: typeof planData) => {
-    if (!convexUser?._id) return;
-    
+  const handlePlanSelectionComplete = async (data: { selectedPlan: string }) => {
     setIsLoading(true);
+
     try {
-      // Save the selected plan to Convex as pending
+      if (!convexUser) return;
+
+      // Save plan selection to Convex
       await updateUserSubscription({
         clerkUserId: convexUser.clerkUserId,
         subscriptionPlan: data.selectedPlan,
@@ -229,15 +407,15 @@ export default function OnboardingStepPage() {
         accountStatus: 'pending_payment',
       });
 
-      // Complete the guided tour and mark demographics as complete
-      await completeGuidedTour({
-        userId: convexUser._id,
-      });
-      
+      // DON'T complete the guided tour yet - wait until after Stripe checkout
+      // The tour will be completed when the user returns from successful checkout
+      // This prevents the useEffect from navigating to dashboard before Stripe redirect
+
       setPlanData(data);
-      
+
+      // Don't clear localStorage yet - wait until after successful checkout
       // The PlanSelectionStep component will handle the Stripe checkout redirect
-      // so we don't navigate here - the user will be redirected to Stripe
+      // User will be redirected to Stripe immediately after this completes
     } catch (error) {
       console.error("Failed to save plan selection:", error);
       alert("There was an issue saving your plan selection. Please try again or contact support if the problem persists.");
@@ -328,39 +506,44 @@ export default function OnboardingStepPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Step {currentStep} of 4
+                Step {currentStep} of 5
               </span>
               <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">
                 {currentStep === 1 && "Demographics"}
                 {currentStep === 2 && "School Information"}
                 {currentStep === 3 && "Term Setup"}
                 {currentStep === 4 && "Plan Selection"}
+                {currentStep === 5 && "Complete"}
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
               <div
                 className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${(currentStep / 4) * 100}%` }}
+                style={{ width: `${(currentStep / 5) * 100}%` }}
               />
             </div>
             
             {/* Step indicators */}
             <div className="flex justify-between mt-4">
-              <div className={`flex items-center space-x-1 lg:space-x-2 ${currentStep >= 1 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              <div className={`flex items-center space-x-1 ${currentStep >= 1 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
                 <div className={`w-3 h-3 rounded-full ${currentStep >= 1 ? 'bg-purple-600' : 'bg-gray-300'}`}></div>
-                <span className="text-xs lg:text-sm font-medium">Demographics</span>
+                <span className="text-xs font-medium">Demographics</span>
               </div>
-              <div className={`flex items-center space-x-1 lg:space-x-2 ${currentStep >= 2 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              <div className={`flex items-center space-x-1 ${currentStep >= 2 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
                 <div className={`w-3 h-3 rounded-full ${currentStep >= 2 ? 'bg-purple-600' : 'bg-gray-300'}`}></div>
-                <span className="text-xs lg:text-sm font-medium">School Info</span>
+                <span className="text-xs font-medium">School</span>
               </div>
-              <div className={`flex items-center space-x-1 lg:space-x-2 ${currentStep >= 3 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              <div className={`flex items-center space-x-1 ${currentStep >= 3 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
                 <div className={`w-3 h-3 rounded-full ${currentStep >= 3 ? 'bg-purple-600' : 'bg-gray-300'}`}></div>
-                <span className="text-xs lg:text-sm font-medium">Term Setup</span>
+                <span className="text-xs font-medium">Term</span>
               </div>
-              <div className={`flex items-center space-x-1 lg:space-x-2 ${currentStep >= 4 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              <div className={`flex items-center space-x-1 ${currentStep >= 4 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
                 <div className={`w-3 h-3 rounded-full ${currentStep >= 4 ? 'bg-purple-600' : 'bg-gray-300'}`}></div>
-                <span className="text-xs lg:text-sm font-medium">Plan</span>
+                <span className="text-xs font-medium">Plan</span>
+              </div>
+              <div className={`flex items-center space-x-1 ${currentStep >= 5 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+                <div className={`w-3 h-3 rounded-full ${currentStep >= 5 ? 'bg-purple-600' : 'bg-gray-300'}`}></div>
+                <span className="text-xs font-medium">Done</span>
               </div>
             </div>
           </div>
@@ -384,6 +567,7 @@ export default function OnboardingStepPage() {
           {currentStep === 1 && (
             <DemographicsStep
               onNext={handleDemographicsNext}
+              onChange={setDemographicsData}
               initialData={demographicsData}
               isLoading={isLoading}
             />
@@ -393,6 +577,7 @@ export default function OnboardingStepPage() {
             <SchoolInfoStep
               onNext={handleSchoolInfoNext}
               onBack={handleBack}
+              onChange={setSchoolData}
               initialData={schoolData}
               isLoading={isLoading}
             />
@@ -402,6 +587,7 @@ export default function OnboardingStepPage() {
             <TermSetupStep
               onComplete={handleTermSetupNext}
               onBack={handleBack}
+              onChange={setTermData}
               initialData={termData}
               isLoading={isLoading}
             />
@@ -413,6 +599,35 @@ export default function OnboardingStepPage() {
               onBack={handleBack}
               initialData={planData}
               isLoading={isLoading}
+            />
+          )}
+
+          {currentStep === 5 && (
+            <CompletionStep
+              onComplete={async () => {
+                try {
+                  // Complete the guided tour
+                  if (convexUser && !convexUser.hasCompletedGuidedTour) {
+                    await completeGuidedTour({ userId: convexUser._id });
+                    console.log('✅ Guided tour completed');
+                  }
+
+                  // Clear onboarding localStorage
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('onboarding_demographics');
+                    localStorage.removeItem('onboarding_school');
+                    localStorage.removeItem('onboarding_term');
+                    localStorage.removeItem('onboarding_plan');
+                  }
+
+                  // Navigate to dashboard
+                  navigate("/app/v2/dashboard");
+                } catch (error) {
+                  console.error('Failed to complete onboarding:', error);
+                  // Navigate anyway
+                  navigate("/app/v2/dashboard");
+                }
+              }}
             />
           )}
         </div>

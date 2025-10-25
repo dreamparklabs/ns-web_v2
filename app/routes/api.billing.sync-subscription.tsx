@@ -1,14 +1,12 @@
 import { clerkClient } from "@clerk/clerk-sdk-node";
+import { json } from "@remix-run/node";
 
 export async function action({ request }: { request: Request }) {
   try {
     const { userId } = await request.json();
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing userId' }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+      return json({ error: 'Missing userId' }, { status: 400 });
     }
 
     console.log('🔄 Syncing subscription for user:', userId);
@@ -28,7 +26,8 @@ export async function action({ request }: { request: Request }) {
 
     console.log('📧 Looking up Stripe customer for email:', userEmail);
 
-    // Find the Stripe customer by email
+    // First, try to find the Stripe customer by email
+    let stripeCustomerId: string | null = null;
     const customersResponse = await fetch(
       `https://api.stripe.com/v1/customers?email=${encodeURIComponent(userEmail)}&limit=1`,
       {
@@ -40,15 +39,35 @@ export async function action({ request }: { request: Request }) {
 
     const customersData = await customersResponse.json();
     
-    if (!customersData.data || customersData.data.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'No Stripe customer found for this email' }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+    if (customersData.data && customersData.data.length > 0) {
+      stripeCustomerId = customersData.data[0].id;
+      console.log('👤 Found Stripe customer by email:', stripeCustomerId);
+    } else {
+      // If not found by email, search by Clerk user ID in metadata
+      // This handles cases where user paid with Link using a different email
+      console.log('🔍 No customer found by email, searching by Clerk user ID in metadata...');
+      
+      const metadataSearchResponse = await fetch(
+        `https://api.stripe.com/v1/customers/search?query=metadata['clerkUserId']:'${userId}'&limit=1`,
+        {
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+          },
+        }
       );
+
+      const metadataSearchData = await metadataSearchResponse.json();
+      
+      if (metadataSearchData.data && metadataSearchData.data.length > 0) {
+        stripeCustomerId = metadataSearchData.data[0].id;
+        console.log('👤 Found Stripe customer by metadata:', stripeCustomerId);
+        console.log('📧 Customer email:', metadataSearchData.data[0].email);
+      }
     }
 
-    const stripeCustomerId = customersData.data[0].id;
-    console.log('👤 Found Stripe customer:', stripeCustomerId);
+    if (!stripeCustomerId) {
+      return json({ error: 'No Stripe customer found for this user' }, { status: 404 });
+    }
 
     // Get ALL subscriptions for this customer (active, trialing, incomplete, etc.)
     const subscriptionsResponse = await fetch(
@@ -77,13 +96,10 @@ export async function action({ request }: { request: Request }) {
 
     if (!subscriptionsData.data || subscriptionsData.data.length === 0) {
       console.log('⚠️ No subscriptions found at all');
-      return new Response(
-        JSON.stringify({ 
-          message: 'No subscriptions found. Please contact support.',
-          customer: stripeCustomerId
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+      return json({
+        message: 'No subscriptions found. Please contact support.',
+        customer: stripeCustomerId
+      }, { status: 404 });
     }
 
     // Find the most recent active subscription by created date (newest first)
@@ -161,27 +177,20 @@ export async function action({ request }: { request: Request }) {
       subscriptionId: subscription.id,
     });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        subscription: {
-          plan: planId,
-          status: subscription.status,
-          subscriptionId: subscription.id,
-        }
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return json({
+      success: true,
+      subscription: {
+        plan: planId,
+        status: subscription.status,
+        subscriptionId: subscription.id,
+      }
+    });
   } catch (error: any) {
     console.error('❌ Error syncing subscription:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Failed to sync subscription',
-        details: error
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return json({
+      error: error.message || 'Failed to sync subscription',
+      details: error
+    }, { status: 500 });
   }
 }
 

@@ -7,6 +7,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import AssignmentDetailsModal from "../components/AssignmentDetailsModal";
 import EditAssignmentModal from "../components/EditAssignmentModal";
+import EditClassModal from "../components/EditClassModal";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -29,6 +30,9 @@ export default function ClassDetail() {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<Id<"assignments"> | null>(null);
   const [isAssignmentDetailsModalOpen, setIsAssignmentDetailsModalOpen] = useState(false);
   const [isEditAssignmentModalOpen, setIsEditAssignmentModalOpen] = useState(false);
+
+  // State for class edit modal
+  const [isEditClassModalOpen, setIsEditClassModalOpen] = useState(false);
 
   // State for class menu dropdown
   const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
@@ -147,8 +151,12 @@ export default function ClassDetail() {
   // Function to handle edit class
   const handleEditClass = () => {
     setIsClassMenuOpen(false);
-    // TODO: Implement edit class functionality
-    console.log('Edit class:', courseId);
+    setIsEditClassModalOpen(true);
+  };
+
+  // Function to close edit class modal
+  const closeEditClassModal = () => {
+    setIsEditClassModalOpen(false);
   };
 
   // Function to handle delete class
@@ -572,6 +580,13 @@ export default function ClassDetail() {
         isOpen={isEditAssignmentModalOpen}
         onClose={closeEditAssignmentModal}
         assignmentId={selectedAssignmentId}
+      />
+
+      {/* Edit Class Modal */}
+      <EditClassModal
+        isOpen={isEditClassModalOpen}
+        onClose={closeEditClassModal}
+        courseId={courseId}
       />
     </div>
   );

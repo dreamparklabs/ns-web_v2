@@ -1,5 +1,5 @@
-import { useLocation, useNavigate } from "react-router";
-import React, { useEffect, memo } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import React, { useEffect, memo, useRef } from "react";
 import Sidebar from "./Sidebar";
 import RouteTransition from "./RouteTransition";
 import { useUserSetup } from "../hooks/useUserSetup";
@@ -7,6 +7,8 @@ import { useSessionTracking } from "../hooks/useSessionTracking";
 import { PostHogPageView } from "./PostHogPageView";
 import CannyWidget from "./CannyWidget";
 import { SubscriptionSync } from "./SubscriptionSync";
+import { useClerkBilling } from "../hooks/useClerkBilling";
+import { useClerk } from "@clerk/clerk-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -41,10 +43,44 @@ SidebarWrapper.displayName = 'SidebarWrapper';
 export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { needsOnboarding, isUserReady, isCreatingUser, convexUser, user, isLoaded, userCreationFailed } = useUserSetup();
+  const { syncSubscription } = useClerkBilling();
+  const { signOut } = useClerk();
+  const hasCompletedCheckout = useRef(false);
 
   // Initialize session tracking
   useSessionTracking();
+
+  // Handle checkout success from onboarding - sync subscription but don't complete tour yet
+  useEffect(() => {
+    const checkoutStatus = searchParams.get('checkout');
+    if (checkoutStatus === 'success' && convexUser && !hasCompletedCheckout.current && user) {
+      hasCompletedCheckout.current = true;
+      console.log('🎉 AppLayout: Checkout successful! Syncing subscription...');
+
+      // Sync subscription from Stripe
+      syncSubscription().then(async () => {
+        console.log('✅ AppLayout: Subscription synced from Stripe');
+
+        // Reload user to get updated metadata
+        await user.reload();
+        console.log('✅ AppLayout: User reloaded with new subscription data');
+
+        // Don't complete guided tour yet - let step 5 handle it
+        // User will see completion page and click "Continue" to finish
+      }).catch((error) => {
+        console.error('❌ AppLayout: Failed to sync subscription:', error);
+      });
+    }
+  }, [searchParams, convexUser, syncSubscription, user]);
+
+  // Reset checkout flag when leaving checkout success page
+  useEffect(() => {
+    if (searchParams.get('checkout') !== 'success') {
+      hasCompletedCheckout.current = false;
+    }
+  }, [searchParams]);
 
   // Debug logging (reduced)
   if (!isLoaded || isCreatingUser) {
@@ -93,26 +129,34 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  // If user creation failed, show error with retry option
-  if (userCreationFailed && !convexUser) {
+  // If user data is not found or creation failed, show friendly error with sign out option
+  if ((userCreationFailed || (isUserReady && !convexUser)) && user) {
     return (
-      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="bg-red-100 dark:bg-red-900 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="bg-red-100 dark:bg-red-900/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Setup Error</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            There was an issue setting up your account. Please refresh the page to try again.
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">User Data Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+            We couldn't find your user data in our system. This may happen if your account was deleted or there was an issue during setup.
           </p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
-          >
-            Refresh Page
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => signOut(() => navigate('/sign-in'))}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 shadow-lg hover:shadow-xl"
+            >
+              Sign Out & Try Again
+            </button>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Need help?{" "}
+              <a href="mailto:support@dreampark.dev" className="text-purple-600 dark:text-purple-400 hover:underline font-medium">
+                Contact support
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     );

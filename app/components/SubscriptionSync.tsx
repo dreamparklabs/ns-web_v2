@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router';
+import { useSearchParams, useLocation } from 'react-router';
 import { useUser } from '@clerk/clerk-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -8,16 +8,18 @@ import { api } from '../../convex/_generated/api';
  * Component that automatically syncs subscription data from Clerk to Convex
  * - Runs on mount and page reload
  * - Runs when Clerk metadata changes
- * - Runs after successful Stripe checkout (checkout=success param)
+ * Note: Checkout success syncing is handled by onboarding route or SettingsModal
  */
 export function SubscriptionSync() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useUser();
   const updateSubscription = useMutation(api.subscriptions.updateUserSubscription);
   const lastSyncedMetadata = useRef<string | null>(null);
 
   // Check if returning from successful checkout
   const checkoutSuccess = searchParams.get('checkout') === 'success';
+  const isOnboardingStep5 = location.pathname.includes('/onboarding/step/5');
 
   useEffect(() => {
     async function syncSubscription() {
@@ -29,8 +31,15 @@ export function SubscriptionSync() {
         subscriptions: user.subscriptions,
       });
       
-      // Skip if metadata hasn't changed (unless it's a checkout success)
-      if (lastSyncedMetadata.current === currentMetadataHash && !checkoutSuccess) {
+      // Skip if this is a checkout success (onboarding route or SettingsModal handles this)
+      if (checkoutSuccess) {
+        const handler = isOnboardingStep5 ? 'onboarding route' : 'SettingsModal';
+        console.log(`🔄 SubscriptionSync: Skipping sync on checkout success (handled by ${handler})`);
+        return;
+      }
+      
+      // Skip if metadata hasn't changed
+      if (lastSyncedMetadata.current === currentMetadataHash) {
         console.log('🔄 SubscriptionSync: Metadata unchanged, skipping sync');
         return;
       }
@@ -110,12 +119,9 @@ export function SubscriptionSync() {
         await updateSubscription(syncPayload);
 
         console.log('✅ SubscriptionSync: Sync completed successfully!');
-        
+
         // Update last synced metadata hash
-        lastSyncedMetadata.current = JSON.stringify({
-          subscription: user.publicMetadata?.subscription,
-          subscriptions: user.subscriptions,
-        });
+        lastSyncedMetadata.current = currentMetadataHash;
       } catch (error) {
         console.error('❌ SubscriptionSync: Failed to sync subscription:', error);
       }

@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface TermSetupStepProps {
   onComplete: (data: { name: string; startDate: string; endDate: string }) => void;
   onBack: () => void;
+  onChange?: (data: { name: string; startDate: string; endDate: string }) => void;
   initialData: { name: string; startDate: string; endDate: string };
   isLoading: boolean;
 }
 
-export default function TermSetupStep({ onComplete, onBack, initialData, isLoading }: TermSetupStepProps) {
+export default function TermSetupStep({ onComplete, onBack, onChange, initialData, isLoading }: TermSetupStepProps) {
   const [name, setName] = useState(initialData.name);
   const [startDate, setStartDate] = useState(initialData.startDate);
   const [endDate, setEndDate] = useState(initialData.endDate);
+
+  // Sync form data with parent component in real-time
+  useEffect(() => {
+    onChange?.({ name, startDate, endDate });
+  }, [name, startDate, endDate, onChange]);
 
   const termSuggestions = [
     "Fall 2024",

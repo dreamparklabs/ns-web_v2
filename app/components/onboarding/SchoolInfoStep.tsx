@@ -5,16 +5,22 @@ import { api } from "../../../convex/_generated/api";
 interface SchoolInfoStepProps {
   onNext: (data: { school: string; majorCategory: string; major: string; minor: string; currentYear: string }) => void;
   onBack: () => void;
+  onChange?: (data: { school: string; majorCategory: string; major: string; minor: string; currentYear: string }) => void;
   initialData: { school: string; majorCategory: string; major: string; minor: string; currentYear: string };
   isLoading: boolean;
 }
 
-export default function SchoolInfoStep({ onNext, onBack, initialData, isLoading }: SchoolInfoStepProps) {
+export default function SchoolInfoStep({ onNext, onBack, onChange, initialData, isLoading }: SchoolInfoStepProps) {
   const [school, setSchool] = useState(initialData.school);
   const [majorCategory, setMajorCategory] = useState(initialData.majorCategory);
   const [major, setMajor] = useState(initialData.major);
   const [minor, setMinor] = useState(initialData.minor);
   const [currentYear, setCurrentYear] = useState(initialData.currentYear);
+
+  // Sync form data with parent component in real-time
+  useEffect(() => {
+    onChange?.({ school, majorCategory, major, minor, currentYear });
+  }, [school, majorCategory, major, minor, currentYear, onChange]);
   
   // School dropdown state
   const [schoolSearch, setSchoolSearch] = useState(initialData.school);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useClerkBilling } from "../../hooks/useClerkBilling";
 
 interface PlanSelectionStepProps {
   onComplete: (data: { selectedPlan: string }) => void;
@@ -9,6 +10,7 @@ interface PlanSelectionStepProps {
 
 export default function PlanSelectionStep({ onComplete, onBack, initialData, isLoading }: PlanSelectionStepProps) {
   const [selectedPlan, setSelectedPlan] = useState(initialData.selectedPlan);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const plans = [
     {
@@ -44,18 +46,42 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
     }
   ];
 
+  const { subscribeToPlan } = useClerkBilling();
+
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("🚀 handleSubmit called!");
     e.preventDefault();
-    if (selectedPlan) {
-      trackUsage('plan_selected', { plan: selectedPlan });
-      try {
-        // This will redirect to Stripe checkout, so we don't call onComplete
-        // The user will be redirected back after successful payment
-        await subscribeToPlan(selectedPlan, '/app/v2/dashboard');
-      } catch (error) {
-        console.error("Failed to subscribe to plan:", error);
-        alert("Failed to subscribe to plan. Please try again.");
-      }
+    console.log("🎯 Selected plan:", selectedPlan);
+    console.log("✅ onComplete function exists?", typeof onComplete);
+    console.log("✅ subscribeToPlan function exists?", typeof subscribeToPlan);
+
+    if (!selectedPlan) {
+      console.error("❌ No plan selected!");
+      alert("Please select a plan first.");
+      return;
+    }
+
+    try {
+      console.log("🎯 Starting checkout process for plan:", selectedPlan);
+
+      // Show redirecting screen
+      setIsRedirecting(true);
+
+      // Save plan selection to Convex first
+      console.log("💾 Calling onComplete...");
+      await onComplete({ selectedPlan });
+
+      console.log("✅ Plan saved, redirecting to Stripe...");
+
+      // Then redirect to Stripe checkout (this will navigate away from the page)
+      console.log("💳 Calling subscribeToPlan...");
+      await subscribeToPlan(selectedPlan, '/onboarding/step/5');
+      console.log("✅ subscribeToPlan completed (should redirect now)");
+    } catch (error) {
+      setIsRedirecting(false);
+      console.error("❌ Failed to subscribe to plan:", error);
+      console.error("❌ Error details:", { error, message: error instanceof Error ? error.message : 'Unknown', stack: error instanceof Error ? error.stack : undefined });
+      alert(`Failed to subscribe to plan: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     }
   };
 
@@ -168,6 +194,24 @@ export default function PlanSelectionStep({ onComplete, onBack, initialData, isL
           </button>
         </div>
       </form>
+
+      {/* Redirecting overlay */}
+      {isRedirecting && (
+        <div className="fixed inset-0 bg-white dark:bg-gray-900 z-[100] flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 border-4 border-purple-200 dark:border-purple-900 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Redirecting to Stripe...
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please wait while we set up your secure checkout
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

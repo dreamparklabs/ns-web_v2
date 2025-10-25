@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useGlobalTerm } from "../hooks/useGlobalTerm";
 import type { Id } from "../../convex/_generated/dataModel";
+import EditClassModal from "../components/EditClassModal";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -27,6 +28,10 @@ export default function Classes() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isGlobalMenuOpen, setIsGlobalMenuOpen] = useState(false);
   const globalMenuRef = useRef<HTMLDivElement>(null);
+
+  // State for edit class modal
+  const [isEditClassModalOpen, setIsEditClassModalOpen] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState<Id<"courses"> | null>(null);
 
   // Get filter from URL params, default to "all"
   const urlFilter = searchParams.get("filter");
@@ -118,8 +123,14 @@ export default function Classes() {
   // Function to handle edit class
   const handleEditClass = (courseId: Id<"courses">) => {
     setOpenMenuId(null);
-    // TODO: Implement edit class functionality
-    console.log('Edit class:', courseId);
+    setSelectedCourseId(courseId);
+    setIsEditClassModalOpen(true);
+  };
+
+  // Function to close edit class modal
+  const closeEditClassModal = () => {
+    setIsEditClassModalOpen(false);
+    setSelectedCourseId(null);
   };
 
   // Function to handle delete class
@@ -482,6 +493,13 @@ export default function Classes() {
             </div>
           </div>
         </div>
+
+      {/* Edit Class Modal */}
+      <EditClassModal
+        isOpen={isEditClassModalOpen}
+        onClose={closeEditClassModal}
+        courseId={selectedCourseId}
+      />
       </div>
   );
 }

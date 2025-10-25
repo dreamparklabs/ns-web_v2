@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
-import { json } from "react-router";
+import { json } from "@remix-run/node";
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 

@@ -44,6 +44,18 @@ export default defineSchema({
     termId: v.id("terms"),
     title: v.string(),
     userId: v.id("users"),
+    // Grading scheme for calculating final grades
+    gradingScheme: v.optional(v.object({
+      mode: v.optional(v.string()), // "percentage" (default) or "points"
+      categories: v.array(
+        v.object({
+          name: v.string(),
+          weight: v.number(),
+          count: v.number(),
+          dropLowest: v.optional(v.number()), // Number of lowest grades to drop
+        }),
+      ),
+    })),
     // D2L integration fields
     d2lOrgUnitId: v.optional(v.string()),
     d2lSyncEnabled: v.optional(v.boolean()),
